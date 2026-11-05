@@ -7,8 +7,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0d1915",
-  "theme_color": "#0d1915",
+  "background_color": "#031b2e",
+  "theme_color": "#015e9d",
   "icons": [
     { "src": "icons/apple-icon-180x180.png", "sizes": "180x180", "type": "image/png" },
     { "src": "icons/favicon-128x128.png", "sizes": "128x128", "type": "image/png" }
