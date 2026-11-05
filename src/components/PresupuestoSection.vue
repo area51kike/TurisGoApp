@@ -1,94 +1,60 @@
 <template>
-  <div class="q-pa-md">
-    <div class="text-h6 text-weight-bold q-mb-xs">
-      {{ isEnglish ? 'Travel Budget Calculator' : 'Calculadora de Presupuesto' }}
-    </div>
-    <p class="text-caption text-grey q-mb-md">
-      {{ isEnglish ? 'Plan your trip expenses' : 'Planifica tus gastos de viaje' }}
-    </p>
+  <section class="page-section budget-page">
+    <header class="page-heading">
+      <span class="eyebrow">{{ isEnglish ? 'TRAVEL WITH A PLAN' : 'VIAJA CON UN PLAN' }}</span>
+      <h1>{{ isEnglish ? 'Trip budget' : 'Presupuesto' }}</h1>
+      <p>{{ isEnglish ? 'Estimates are a guide. Confirm prices with each place.' : 'Los costos son una referencia; confirma precios con cada lugar.' }}</p>
+    </header>
 
-    <q-card class="q-pa-md q-mb-md bg-primary text-white text-center">
-      <div class="text-caption">
-        {{ isEnglish ? 'Total Estimated' : 'Total Estimado' }}
+    <div class="budget-total">
+      <span>{{ isEnglish ? 'Estimated total' : 'Total estimado' }}</span>
+      <strong>${{ totalBudget.toFixed(2) }}</strong>
+      <small>{{ isEnglish ? 'USD · from your current selection' : 'USD · según tu selección actual' }}</small>
+    </div>
+
+    <div class="budget-block">
+      <div class="section-heading section-heading--compact"><h2>{{ isEnglish ? 'Places in your trip' : 'Lugares de tu viaje' }}</h2><button class="text-link" @click="$emit('open-search')">{{ isEnglish ? 'Add a place' : 'Añadir lugar' }} <q-icon name="add" /></button></div>
+      <div v-if="selectedPlaces.length" class="budget-stops">
+        <div v-for="place in selectedPlaces" :key="place.id" class="budget-stop">
+          <img :src="place.image" :alt="place.name" />
+          <div class="budget-stop__info"><strong>{{ isEnglish ? place.nameEn : place.name }}</strong><span>{{ isEnglish ? 'Estimated travel' : 'Viaje estimado' }}</span></div>
+          <strong class="budget-stop__price">~${{ place.travelEstimate }}</strong>
+          <q-btn flat round dense icon="close" :aria-label="isEnglish ? 'Remove place' : 'Quitar lugar'" @click="removePlace(place.id)" />
+        </div>
       </div>
-      <div class="text-h4 text-weight-bold">${{ totalBudget }} USD</div>
-    </q-card>
-
-    <div class="q-gutter-y-sm">
-      <q-input
-        outlined
-        dense
-        type="number"
-        v-model.number="transportCost"
-        :label="isEnglish ? 'Transport / Gas ($)' : 'Transporte / Gasolina ($)'"
-      />
-      <q-input
-        outlined
-        dense
-        type="number"
-        v-model.number="foodCost"
-        :label="isEnglish ? 'Food & Drinks ($)' : 'Alimentación ($)'"
-      />
-      <q-input
-        outlined
-        dense
-        type="number"
-        v-model.number="lodgingCost"
-        :label="isEnglish ? 'Hotel / Lodging ($)' : 'Hospedaje ($)'"
-      />
-      <q-input
-        outlined
-        dense
-        type="number"
-        v-model.number="extrasCost"
-        :label="isEnglish ? 'Activities & Extras ($)' : 'Entradas y Extras ($)'"
-      />
+      <div v-else class="budget-empty"><q-icon name="add_road" /><span>{{ isEnglish ? 'Add a recommended place to see its estimated travel cost.' : 'Añade un lugar recomendado para ver su costo estimado de viaje.' }}</span></div>
     </div>
-  </div>
+
+    <div class="budget-block">
+      <h2>{{ isEnglish ? 'Other trip costs' : 'Otros gastos del viaje' }}</h2>
+      <q-input :model-value="costs.food" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Food & drinks' : 'Comida y bebidas'" prefix="$" @update:model-value="updateCost('food', $event)" />
+      <q-input :model-value="costs.lodging" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Lodging' : 'Hospedaje'" prefix="$" @update:model-value="updateCost('lodging', $event)" />
+      <q-input :model-value="costs.extras" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Tickets & other expenses' : 'Entradas y otros gastos'" prefix="$" @update:model-value="updateCost('extras', $event)" />
+    </div>
+    <div class="budget-tip"><q-icon name="lightbulb" /><span>{{ isEnglish ? 'Travel costs are sample estimates from San Salvador. Set your starting point with your group before deciding.' : 'El costo de viaje es un estimado de muestra desde San Salvador. Confirma el punto de salida antes de decidir.' }}</span></div>
+  </section>
 </template>
 
-<script>
+<script setup>
 import { computed } from 'vue'
 
-export default {
-  name: 'PresupuestoSection',
-  props: {
-    isEnglish: Boolean,
-    budgetCosts: Object,
-    totalBudget: Number,
-  },
-  emits: ['update:budgetCosts'],
-  setup(props, { emit }) {
-    const updateCost = (key, val) => {
-      emit('update:budgetCosts', { ...props.budgetCosts, [key]: val })
-    }
+const props = defineProps({
+  isEnglish: Boolean,
+  places: { type: Array, required: true },
+  selectedPlaceIds: { type: Array, default: () => [] },
+  costs: { type: Object, required: true },
+  totalBudget: { type: Number, default: 0 },
+})
+const emit = defineEmits(['update:selected-place-ids', 'update:costs', 'open-search'])
 
-    const transportCost = computed({
-      get: () => props.budgetCosts.transport,
-      set: (val) => updateCost('transport', val),
-    })
+const selectedPlaces = computed(() => props.selectedPlaceIds.map((id) => props.places.find((place) => place.id === id)).filter(Boolean))
+const costs = computed(() => props.costs)
 
-    const foodCost = computed({
-      get: () => props.budgetCosts.food,
-      set: (val) => updateCost('food', val),
-    })
+function updateCost(key, value) {
+  emit('update:costs', { ...props.costs, [key]: Number(value) || 0 })
+}
 
-    const lodgingCost = computed({
-      get: () => props.budgetCosts.lodging,
-      set: (val) => updateCost('lodging', val),
-    })
-
-    const extrasCost = computed({
-      get: () => props.budgetCosts.extras,
-      set: (val) => updateCost('extras', val),
-    })
-
-    return {
-      transportCost,
-      foodCost,
-      lodgingCost,
-      extrasCost,
-    }
-  },
+function removePlace(id) {
+  emit('update:selected-place-ids', props.selectedPlaceIds.filter((selectedId) => selectedId !== id))
 }
 </script>

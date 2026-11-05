@@ -1,0 +1,16 @@
+{
+  "name": "TURISGO · Turismo en El Salvador",
+  "short_name": "TURISGO",
+  "description": "Descubre destinos, hoteles y experiencias en El Salvador.",
+  "lang": "es-SV",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1915",
+  "theme_color": "#0d1915",
+  "icons": [
+    { "src": "icons/apple-icon-180x180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icons/favicon-128x128.png", "sizes": "128x128", "type": "image/png" }
+  ]
+}

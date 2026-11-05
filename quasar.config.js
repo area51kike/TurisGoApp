@@ -3,7 +3,7 @@
 
 import { defineConfig } from '#q-app'
 
-export default defineConfig((/* ctx */) => {
+export default defineConfig((ctx) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -31,6 +31,9 @@ export default defineConfig((/* ctx */) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
+      // GitHub Pages serves this repository below /TurisGoApp/.
+      publicPath: ctx.dev ? '/' : '/TurisGoApp/',
+
       target: {
         // browser: 'baseline-widely-available',
         // node: 'node22'

@@ -1,7 +1,6 @@
 // src/boot/firebase.js
 import { boot } from 'quasar/wrappers'
-import { initializeApp } from 'firebase/app'
-import { getAnalytics } from 'firebase/analytics'
+import { getApp, getApps, initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 
 // Configuración de tu proyecto
@@ -16,13 +15,8 @@ const firebaseConfig = {
 }
 
 // Inicialización de Firebase
-const app = initializeApp(firebaseConfig)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
 const db = getFirestore(app)
-
-// Opcional: inicializar Analytics solo en el cliente
-if (typeof window !== 'undefined') {
-  getAnalytics(app)
-}
 
 // Exportamos 'db' para consumirlo en cualquier página o componente
 export { db }
