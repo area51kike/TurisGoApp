@@ -48,6 +48,7 @@
         v-if="currentScreen === 'home'"
         :is-english="isEnglish"
         :search-query="searchQuery"
+        :user-name="userProfile.name"
         :places="visiblePlaces"
         :saved-ids="savedIds"
         @update:search-query="searchQuery = $event"

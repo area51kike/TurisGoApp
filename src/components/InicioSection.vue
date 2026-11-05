@@ -1,106 +1,246 @@
 <template>
-  <div class="home-screen">
-    <section class="home-hero">
-      <div class="home-hero__mosaic" aria-hidden="true">
-        <img v-for="image in heroImages" :key="image" :src="image" alt="" />
-      </div>
-      <div class="home-hero__shade"></div>
-      <div class="home-hero__content">
-        <span class="eyebrow">{{ isEnglish ? 'YOUR NEXT STORY STARTS HERE' : 'TU PRÓXIMA HISTORIA EMPIEZA AQUÍ' }}</span>
-        <h1>TURISGO</h1>
-        <p>{{ isEnglish ? 'Find places to love in El Salvador' : 'Encuentra lugares para enamorarte de El Salvador' }}</p>
-      </div>
-    </section>
+  <div class="hm">
+    <!-- Saludo + buscador -->
+    <header class="hm-top">
+      <p class="hm-hello">
+        {{ greeting }}<template v-if="firstName">, {{ firstName }}</template>
+      </p>
+      <h1 class="hm-title">
+        <template v-if="isEnglish">Where to <em>next</em> in El Salvador?</template>
+        <template v-else>¿A dónde vamos <em>hoy</em> en El Salvador?</template>
+      </h1>
 
-    <div class="home-content">
-      <q-input
-        :model-value="searchQuery"
-        readonly
-        outlined
-        rounded
-        dense
-        class="home-search"
-        :placeholder="isEnglish ? 'Where would you like to go?' : '¿A dónde quieres ir?'"
-        @update:model-value="$emit('update:searchQuery', $event)"
-        @click="$emit('open-search')"
-      >
-        <template #prepend><q-icon name="search" /></template>
-      </q-input>
-
-      <button class="map-feature" @click="$emit('open-map')">
-        <span class="map-feature__icon"><q-icon name="map" /></span>
-        <span class="map-feature__text">
-          <strong>{{ isEnglish ? 'Explore the map' : 'Explora el mapa' }}</strong>
-          <small>{{ isEnglish ? 'See destinations around you' : 'Descubre destinos cerca de ti' }}</small>
-        </span>
-        <q-icon name="arrow_forward" />
-      </button>
-
-      <div class="quick-categories">
-        <button v-for="category in categories" :key="category.key" class="quick-category" @click="$emit('open-category', category.key)">
-          <span class="quick-category__icon"><q-icon :name="category.icon" /></span>
-          <span>{{ isEnglish ? category.en : category.es }}</span>
+      <div class="hm-finder">
+        <button class="hm-finder__search" @click="$emit('open-search')">
+          <q-icon name="search" />
+          <span>{{
+            searchQuery ||
+            (isEnglish ? 'Beaches, volcanoes, hotels…' : 'Playas, volcanes, hoteles…')
+          }}</span>
+        </button>
+        <button
+          class="hm-finder__map"
+          :aria-label="isEnglish ? 'Open map' : 'Abrir mapa'"
+          @click="$emit('open-map')"
+        >
+          <q-icon name="map" />
         </button>
       </div>
 
-      <section class="content-section">
-        <div class="section-heading">
-          <div>
-            <span class="eyebrow">{{ isEnglish ? 'EXPLORE EL SALVADOR' : 'EXPLORA EL SALVADOR' }}</span>
-            <h2>{{ isEnglish ? 'Featured places' : 'Destinos destacados' }}</h2>
-          </div>
-          <button class="text-link" @click="$emit('open-category', 'destination')">{{ isEnglish ? 'See all' : 'Ver todos' }} <q-icon name="chevron_right" /></button>
-        </div>
-        <div class="horizontal-cards">
-          <PlaceCard v-for="place in destinations" :key="place.id" :place="place" :is-saved="savedIds.includes(place.id)" :is-english="isEnglish" @select="$emit('select-place', $event)" @toggle-save="$emit('toggle-save', $event)" />
-        </div>
-      </section>
+      <div class="hm-chips" role="list">
+        <button
+          v-for="chip in chips"
+          :key="chip.key"
+          class="hm-chip"
+          role="listitem"
+          @click="$emit('open-category', chip.key)"
+        >
+          <q-icon :name="chip.icon" />
+          {{ isEnglish ? chip.en : chip.es }}
+          <b v-if="chip.key === 'saved' && savedIds.length">{{ savedIds.length }}</b>
+        </button>
+      </div>
+    </header>
 
-      <section class="content-section">
-        <div class="section-heading">
-          <div>
-            <span class="eyebrow">{{ isEnglish ? 'REST WELL' : 'DESCANSA BIEN' }}</span>
-            <h2>{{ isEnglish ? 'Recommended stays' : 'Hoteles recomendados' }}</h2>
+    <!-- Destino del día -->
+    <section v-if="featured" class="hm-block">
+      <div class="hm-label">
+        <span>{{ isEnglish ? 'Pick of the day' : 'Destino del día' }}</span>
+        <i></i>
+      </div>
+      <article
+        class="hm-poster"
+        tabindex="0"
+        @click="$emit('select-place', featured)"
+        @keydown.enter="$emit('select-place', featured)"
+      >
+        <img :src="featured.image" :alt="nameOf(featured)" />
+        <button
+          class="hm-heart"
+          :class="{ on: isSaved(featured) }"
+          :aria-label="
+            isSaved(featured)
+              ? isEnglish
+                ? 'Remove from saved'
+                : 'Quitar de guardados'
+              : isEnglish
+                ? 'Save place'
+                : 'Guardar lugar'
+          "
+          @click.stop="$emit('toggle-save', featured.id)"
+        >
+          <q-icon :name="isSaved(featured) ? 'favorite' : 'favorite_border'" />
+        </button>
+        <div class="hm-poster__info">
+          <span class="hm-poster__region"><q-icon name="place" /> {{ featured.region }}</span>
+          <h2>{{ nameOf(featured) }}</h2>
+          <p>{{ descOf(featured) }}</p>
+          <div class="hm-poster__foot">
+            <span v-if="featured.rating" class="hm-rate"
+              ><q-icon name="star" /> {{ featured.rating.toFixed(1) }}</span
+            >
+            <span class="hm-go"
+              >{{ isEnglish ? 'Discover' : 'Descubrir' }} <q-icon name="arrow_outward"
+            /></span>
           </div>
-          <button class="text-link" @click="$emit('open-category', 'hotel')">{{ isEnglish ? 'See all' : 'Ver todos' }} <q-icon name="chevron_right" /></button>
         </div>
-        <div class="horizontal-cards">
-          <PlaceCard v-for="place in hotels" :key="place.id" :place="place" :is-saved="savedIds.includes(place.id)" :is-english="isEnglish" @select="$emit('select-place', $event)" @toggle-save="$emit('toggle-save', $event)" />
-        </div>
-      </section>
+      </article>
+    </section>
 
-      <section class="planning-card">
-        <div class="planning-card__icon"><q-icon name="route" /></div>
-        <div>
-          <strong>{{ isEnglish ? 'Plan your next trip' : 'Planea tu próximo viaje' }}</strong>
-          <p>{{ isEnglish ? 'Compare travel estimates before you go.' : 'Compara el costo estimado del viaje antes de salir.' }}</p>
-          <button class="text-link" @click="$emit('open-budget')">{{ isEnglish ? 'Build a budget' : 'Armar presupuesto' }} <q-icon name="arrow_forward" /></button>
-        </div>
-      </section>
-    </div>
+    <!-- Bento de destinos -->
+    <section v-if="bento.length" class="hm-block">
+      <div class="hm-label">
+        <span>{{ isEnglish ? 'More to explore' : 'Más para explorar' }}</span>
+        <i></i>
+        <button class="hm-more" @click="$emit('open-category', 'destination')">
+          {{ isEnglish ? 'All' : 'Todos' }}
+        </button>
+      </div>
+      <div class="hm-bento">
+        <article
+          v-for="(place, i) in bento"
+          :key="place.id"
+          class="hm-tile"
+          :class="{ 'hm-tile--tall': i === 0 }"
+          tabindex="0"
+          @click="$emit('select-place', place)"
+          @keydown.enter="$emit('select-place', place)"
+        >
+          <img :src="place.image" :alt="nameOf(place)" loading="lazy" />
+          <button
+            class="hm-heart hm-heart--sm"
+            :class="{ on: isSaved(place) }"
+            :aria-label="isEnglish ? 'Save place' : 'Guardar lugar'"
+            @click.stop="$emit('toggle-save', place.id)"
+          >
+            <q-icon :name="isSaved(place) ? 'favorite' : 'favorite_border'" />
+          </button>
+          <div class="hm-tile__info">
+            <strong>{{ nameOf(place) }}</strong>
+            <small>{{ place.region }}</small>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Alojamientos -->
+    <section v-if="hotels.length" class="hm-block">
+      <div class="hm-label">
+        <span>{{ isEnglish ? 'Where to stay' : 'Dónde quedarte' }}</span>
+        <i></i>
+        <button class="hm-more" @click="$emit('open-category', 'hotel')">
+          {{ isEnglish ? 'All' : 'Todos' }}
+        </button>
+      </div>
+      <ol class="hm-stays">
+        <li v-for="(hotel, i) in hotels" :key="hotel.id">
+          <article
+            class="hm-stay"
+            tabindex="0"
+            @click="$emit('select-place', hotel)"
+            @keydown.enter="$emit('select-place', hotel)"
+          >
+            <span class="hm-stay__n">{{ String(i + 1).padStart(2, '0') }}</span>
+            <img :src="hotel.image" :alt="nameOf(hotel)" loading="lazy" />
+            <div class="hm-stay__txt">
+              <strong>{{ nameOf(hotel) }}</strong>
+              <small><q-icon name="place" /> {{ hotel.region }}</small>
+              <span class="hm-stay__price">{{
+                (isEnglish ? hotel.priceLabelEn : hotel.priceLabel) ||
+                (isEnglish ? 'Check dates' : 'Consulta fechas')
+              }}</span>
+            </div>
+            <div class="hm-stay__side">
+              <span v-if="hotel.rating" class="hm-rate"
+                ><q-icon name="star" /> {{ hotel.rating.toFixed(1) }}</span
+              >
+              <button
+                class="hm-heart hm-heart--ghost"
+                :class="{ on: isSaved(hotel) }"
+                :aria-label="isEnglish ? 'Save place' : 'Guardar lugar'"
+                @click.stop="$emit('toggle-save', hotel.id)"
+              >
+                <q-icon :name="isSaved(hotel) ? 'favorite' : 'favorite_border'" />
+              </button>
+            </div>
+          </article>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Atajos -->
+    <section class="hm-block hm-duo">
+      <button class="hm-duo__a" @click="$emit('open-budget')">
+        <q-icon name="payments" />
+        <strong>{{ isEnglish ? 'Trip budget' : 'Presupuesto' }}</strong>
+        <small>{{
+          isEnglish ? 'Estimate costs before you go' : 'Calcula el costo antes de salir'
+        }}</small>
+      </button>
+      <button class="hm-duo__b" @click="$emit('open-map')">
+        <q-icon name="explore" />
+        <strong>{{ isEnglish ? 'Map' : 'Mapa' }}</strong>
+        <small>{{ isEnglish ? 'Places near you' : 'Lugares cerca de ti' }}</small>
+      </button>
+    </section>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import PlaceCard from './PlaceCard.vue'
 
 const props = defineProps({
   isEnglish: Boolean,
   searchQuery: String,
+  userName: { type: String, default: '' },
   places: { type: Array, required: true },
   savedIds: { type: Array, default: () => [] },
 })
 
-defineEmits(['update:searchQuery', 'open-search', 'open-map', 'open-category', 'open-budget', 'select-place', 'toggle-save'])
+defineEmits([
+  'update:searchQuery',
+  'open-search',
+  'open-map',
+  'open-category',
+  'open-budget',
+  'select-place',
+  'toggle-save',
+])
 
-const destinations = computed(() => props.places.filter((place) => place.type === 'destination').slice(0, 4))
-const hotels = computed(() => props.places.filter((place) => place.type === 'hotel'))
-const heroImages = computed(() => props.places.slice(0, 6).map((place) => place.image))
-const categories = [
+const chips = [
+  { key: 'destination', icon: 'landscape', es: 'Destinos', en: 'Places' },
   { key: 'hotel', icon: 'bed', es: 'Hoteles', en: 'Stays' },
-  { key: 'destination', icon: 'photo_camera', es: 'Lugares', en: 'Places' },
   { key: 'map', icon: 'near_me', es: 'Rutas', en: 'Routes' },
-  { key: 'saved', icon: 'favorite', es: 'Guardados', en: 'Saved' },
+  { key: 'saved', icon: 'favorite_border', es: 'Guardados', en: 'Saved' },
 ]
+
+const destinations = computed(() => props.places.filter((p) => p.type === 'destination'))
+const hotels = computed(() => props.places.filter((p) => p.type === 'hotel').slice(0, 4))
+
+// El destino del día rota con la fecha, sin aleatoriedad en cada render.
+const featured = computed(() => {
+  const list = destinations.value
+  if (!list.length) return null
+  const day = Math.floor(Date.now() / 86400000)
+  return list[day % list.length]
+})
+const bento = computed(() =>
+  destinations.value.filter((p) => p.id !== featured.value?.id).slice(0, 3),
+)
+
+const firstName = computed(() => {
+  const name = (props.userName || '').trim()
+  if (!name || name === 'Viajero TURISGO') return ''
+  return name.split(/\s+/)[0]
+})
+const greeting = computed(() => {
+  const h = new Date().getHours()
+  if (props.isEnglish) return h < 12 ? 'Good morning' : h < 19 ? 'Good afternoon' : 'Good evening'
+  return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
+})
+
+const isSaved = (place) => props.savedIds.includes(place.id)
+const nameOf = (place) => (props.isEnglish ? place.nameEn || place.name : place.name)
+const descOf = (place) =>
+  props.isEnglish ? place.descriptionEn || place.description : place.description
 </script>
