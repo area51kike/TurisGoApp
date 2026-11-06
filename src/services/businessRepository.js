@@ -1,14 +1,26 @@
 import { collection, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
-import { db } from '../boot/firebase'
+import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage'
+import { auth, db, storage } from '../boot/firebase'
 
 /** Store public business listing fields and image URLs in Firestore. */
 export async function saveBusinessListing(profile) {
   const { id, ...fields } = profile
+  const uid = auth.currentUser?.uid
+  if (!uid) throw new Error('auth-required')
+  const photoUrls = await Promise.all((fields.photoUrls || []).map(async (photo, index) => {
+    if (!photo.startsWith('data:')) return photo
+    const path = `businessListings/${uid}/${id}-${index}-${Date.now()}.jpg`
+    const target = storageRef(storage, path)
+    await uploadString(target, photo, 'data_url', { contentType: 'image/jpeg' })
+    return getDownloadURL(target)
+  }))
+  const saved = { ...fields, photoUrls, ownerUid: uid }
   await setDoc(
     doc(db, 'businessProfiles', id),
-    { ...fields, updatedAt: serverTimestamp() },
+    { ...saved, updatedAt: serverTimestamp() },
     { merge: true },
   )
+  return saved
 }
 
 export async function loadBusinessListings() {

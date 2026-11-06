@@ -3,6 +3,7 @@ import { boot } from 'quasar/wrappers'
 import { getApp, getApps, initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 // Configuración de tu proyecto
 const firebaseConfig = {
@@ -19,9 +20,10 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
 const db = getFirestore(app)
 const auth = getAuth(app)
+const storage = getStorage(app)
 
 // Exportamos 'db' para consumirlo en cualquier página o componente
-export { app, auth, db }
+export { app, auth, db, storage }
 
 // Exportación por defecto para el sistema de boot de Quasar
 export default boot(({ app }) => {

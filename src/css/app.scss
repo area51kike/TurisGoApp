@@ -162,8 +162,25 @@ button {
   color: var(--text-muted);
 }
 .topbar-actions {
-  gap: 8px;
+  gap: 6px;
 }
+.topbar-account {
+  min-width: 36px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.topbar-account .q-icon { font-size: 17px; }
 .language-toggle,
 .topbar-icon,
 .topbar-avatar {
@@ -642,6 +659,24 @@ button {
 }
 .detail-gallery .q-carousel__navigation {
   bottom: 9px;
+  gap: 3px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(2, 19, 31, 0.5);
+  backdrop-filter: blur(8px);
+}
+.detail-gallery .q-carousel__navigation .q-btn {
+  min-width: 14px;
+  min-height: 14px;
+  padding: 2px;
+  opacity: 0.76;
+}
+.detail-gallery .q-carousel__navigation .q-icon {
+  font-size: 7px;
+}
+.detail-gallery .q-carousel__navigation .q-btn--active {
+  color: var(--gold) !important;
+  opacity: 1;
 }
 .detail-gallery .q-carousel__control {
   background: rgba(0, 0, 0, 0.26);
@@ -1575,6 +1610,15 @@ button {
   background: var(--surface);
   color: var(--text-primary);
 }
+.settings-editor-dialog {
+  display: grid;
+  gap: 12px;
+}
+.settings-editor-dialog .settings-dialog__top { margin-bottom: 2px; }
+.settings-editor-dialog .q-field__native,
+.settings-editor-dialog .q-field__label,
+.settings-editor-dialog .q-field__marginal,
+.settings-editor-dialog .q-field__bottom { color: var(--text-primary); }
 .settings-dialog__top {
   display: flex;
   align-items: center;
@@ -1685,6 +1729,98 @@ button {
 .settings-dialog__actions .q-btn {
   min-height: 40px;
   font-size: 10px;
+}
+.custom-theme-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--app-bg);
+}
+.palette-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  color: var(--text-primary);
+  font-size: 11px;
+}
+.palette-field input {
+  width: 46px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.palette-preview {
+  display: grid;
+  gap: 7px;
+  min-height: 92px;
+  padding: 15px;
+  border: 1px solid var(--preview-accent);
+  border-radius: 14px;
+  font-size: 12px;
+}
+.palette-preview strong { font-size: 13px; }
+.palette-preview span { color: var(--preview-accent); }
+.palette-preview i {
+  width: 38px;
+  height: 5px;
+  border-radius: 9px;
+  background: var(--preview-accent);
+}
+.font-live-preview {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--app-bg);
+}
+.font-live-preview small {
+  color: var(--accent);
+  font: 700 8px 'DM Sans', sans-serif;
+  letter-spacing: 0.14em;
+}
+.font-live-preview strong { font-size: 25px; }
+.font-live-preview span { color: var(--text-muted); font-size: 12px; }
+.profile-account-entry {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 14px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.profile-account-entry > span:nth-child(2) { flex: 1; display: grid; gap: 3px; }
+.profile-account-entry strong { font-size: 12px; }
+.profile-account-entry small { color: var(--text-muted); font-size: 9px; }
+.commission-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.commission-note .q-icon { color: var(--gold); }
+.q-menu { background: var(--surface) !important; color: var(--text-primary) !important; }
+.q-menu .q-item { color: var(--text-primary); }
+@media (max-width: 390px) {
+  .topbar-account { width: 36px; padding: 0; }
+  .topbar-account span { display: none; }
 }
 
 .tutorial-overlay {

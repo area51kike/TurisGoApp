@@ -17,8 +17,8 @@
       <div v-if="selectedPlaces.length" class="budget-stops">
         <div v-for="place in selectedPlaces" :key="place.id" class="budget-stop">
           <img :src="place.image" :alt="place.name" />
-          <div class="budget-stop__info"><strong>{{ isEnglish ? place.nameEn : place.name }}</strong><span>{{ isEnglish ? 'Estimated travel' : 'Viaje estimado' }}</span></div>
-          <strong class="budget-stop__price">~${{ place.travelEstimate }}</strong>
+          <div class="budget-stop__info"><strong>{{ isEnglish ? place.nameEn : place.name }}</strong><span>{{ isEnglish ? 'Estimated travel' : 'Viaje estimado' }} · ~${{ place.travelEstimate || 0 }}</span><span>{{ isEnglish ? 'Admission' : 'Entrada' }} · ${{ place.admissionEstimate || 0 }}</span></div>
+          <strong class="budget-stop__price">~${{ (Number(place.travelEstimate) + Number(place.admissionEstimate || 0)).toFixed(0) }}</strong>
           <q-btn flat round dense icon="close" :aria-label="isEnglish ? 'Remove place' : 'Quitar lugar'" @click="removePlace(place.id)" />
         </div>
       </div>
@@ -32,7 +32,7 @@
       <q-input :model-value="costs.lodging" :disable="!selectedPlaces.length" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Lodging' : 'Hospedaje'" prefix="$" @update:model-value="updateCost('lodging', $event)" />
       <q-input :model-value="costs.extras" :disable="!selectedPlaces.length" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Admission & other expenses' : 'Entradas y otros gastos'" prefix="$" @update:model-value="updateCost('extras', $event)" />
     </div>
-    <div v-if="selectedPlaces.length" class="budget-tip"><q-icon name="lightbulb" /><span>{{ isEnglish ? 'Free parks and public areas have $0 admission unless a listing states a fee. Travel is estimated separately from San Salvador.' : 'Los parques y espacios públicos gratuitos tienen entrada de $0 salvo que la ficha indique una tarifa. El viaje se estima aparte desde San Salvador.' }}</span></div>
+    <div v-if="selectedPlaces.length" class="budget-tip"><q-icon name="lightbulb" /><span>{{ isEnglish ? 'Admission defaults to $0 unless the listing gives a fee. Check the place details for current rates. Travel is estimated separately from San Salvador.' : 'La entrada se calcula en $0 salvo que la ficha indique una tarifa. Confirma el precio actual en los detalles del lugar. El viaje se estima aparte desde San Salvador.' }}</span></div>
   </section>
 </template>
 

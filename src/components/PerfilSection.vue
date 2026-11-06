@@ -12,6 +12,12 @@
       </p>
     </header>
 
+    <button class="profile-account-entry" @click="$emit('navigate', 'account')">
+      <span class="profile-action__icon"><q-icon :name="isAuthenticated ? 'manage_accounts' : 'login'" /></span>
+      <span><strong>{{ isEnglish ? (isAuthenticated ? 'Account settings' : 'Sign in or create an account') : (isAuthenticated ? 'Mi cuenta' : 'Iniciar sesión o crear cuenta') }}</strong><small>{{ isEnglish ? 'Email, phone, and account type' : 'Correo, teléfono y tipo de cuenta' }}</small></span>
+      <q-icon name="chevron_right" />
+    </button>
+
     <div class="profile-card">
       <div class="profile-card__identity">
         <button
@@ -115,7 +121,7 @@
         color="grey-2"
         text-color="dark"
         :options="modeOptions"
-        @update:model-value="save"
+        @update:model-value="changeMode"
       />
       <p class="subtle-note">
         {{
@@ -172,8 +178,8 @@
       <q-icon name="security" />
       {{
         isEnglish
-          ? 'This prototype stores personal settings on this device, and your photo is saved with your profile. Account sign-in is not connected yet.'
-          : 'Este prototipo guarda tus preferencias en este dispositivo y tu foto se guarda con tu perfil. El inicio de sesión aún no está conectado.'
+          ? (isAuthenticated ? 'Your account is connected. Appearance settings are saved on this device.' : 'The traveler profile is saved on this device. Sign in to create an account and use chat.')
+          : (isAuthenticated ? 'Tu cuenta está conectada. La apariencia se guarda en este dispositivo.' : 'El perfil de viajero se guarda en este dispositivo. Inicia sesión para crear una cuenta y usar el chat.')
       }}
     </div>
   </section>
@@ -187,6 +193,7 @@ import { imageToDataUrl, photoErrorMessage } from '../services/imageUtils'
 const props = defineProps({
   isEnglish: Boolean,
   userProfile: { type: Object, required: true },
+  isAuthenticated: Boolean,
 })
 const emit = defineEmits(['save-profile', 'navigate', 'open-settings'])
 
@@ -248,6 +255,16 @@ const actions = [
 
 function pickPhoto() {
   fileInput.value?.click()
+}
+
+function changeMode(value) {
+  if (value === 'business' && !props.isAuthenticated) {
+    draft.mode = 'personal'
+    emit('navigate', 'account')
+    $q.notify({ type: 'info', message: props.isEnglish ? 'Create an account and choose Business to continue.' : 'Crea una cuenta y elige Empresarial para continuar.' })
+    return
+  }
+  save()
 }
 
 async function onPhotoSelected(event) {

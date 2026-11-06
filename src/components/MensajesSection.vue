@@ -25,7 +25,7 @@
         <q-icon name="chevron_right" />
       </button>
       <div v-if="matches.length === 0" class="empty-state"><q-icon name="person_search" /><strong>{{ isEnglish ? 'No travelers found' : 'No encontramos viajeros' }}</strong><span>{{ isEnglish ? 'Try searching for another username.' : 'Prueba con otro nombre de usuario.' }}</span></div>
-      <div v-if="!query && matches.length" class="chat-note"><q-icon name="info" /> {{ isEnglish ? 'Sample accounts are shown until user registration is connected.' : 'Se muestran cuentas de ejemplo mientras se conecta el registro de usuarios.' }}</div>
+      <div v-if="!query && matches.length" class="chat-note"><q-icon name="verified_user" /> {{ isEnglish ? 'These are registered TURISGO accounts.' : 'Estas son cuentas TURISGO registradas.' }}</div>
     </div>
 
     <div v-else class="chat-room">

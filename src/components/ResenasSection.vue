@@ -11,7 +11,12 @@
     </div>
     <div v-else class="verified-banner"><q-icon name="verified" /> {{ isEnglish ? 'Visit verified. You can leave a review.' : 'Visita verificada. Ya puedes dejar una reseña.' }}</div>
 
-    <form v-if="visited" class="review-form" @submit.prevent="submitReview">
+    <div v-if="visited && !isAuthenticated" class="visit-gate">
+      <div class="visit-gate__icon"><q-icon name="login" /></div>
+      <div><strong>{{ isEnglish ? 'Sign in to publish a review' : 'Inicia sesión para publicar una reseña' }}</strong><p>{{ isEnglish ? 'Your verified review will be connected to your traveler account.' : 'Tu reseña verificada quedará vinculada a tu cuenta de viajero.' }}</p></div>
+      <q-btn outline rounded color="primary" :label="isEnglish ? 'Sign in' : 'Iniciar sesión'" @click="$emit('request-account')" />
+    </div>
+    <form v-if="visited && isAuthenticated" class="review-form" @submit.prevent="submitReview">
       <label class="review-label">{{ isEnglish ? 'Your rating' : 'Tu puntuación' }}</label>
       <q-rating v-model="score" size="30px" color="amber-8" icon="star_border" icon-selected="star" />
       <q-input v-model="text" outlined rounded autogrow :placeholder="isEnglish ? 'Share a helpful tip or experience…' : 'Comparte un consejo o tu experiencia…'" />
@@ -35,11 +40,12 @@ import { ref } from 'vue'
 const props = defineProps({
   isEnglish: Boolean,
   visited: Boolean,
+  isAuthenticated: Boolean,
   checkingVisit: Boolean,
   reviews: { type: Array, default: () => [] },
   rating: { type: Number, default: null },
 })
-const emit = defineEmits(['verify-visit', 'submit-review'])
+const emit = defineEmits(['verify-visit', 'submit-review', 'request-account'])
 const score = ref(0)
 const text = ref('')
 

@@ -16,8 +16,10 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  where,
 } from 'firebase/firestore'
-import { auth, db } from '../boot/firebase'
+import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage'
+import { auth, db, storage } from '../boot/firebase'
 
 function normalizeUsername(value) {
   return value.trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9._-]/g, '')
@@ -25,6 +27,11 @@ function normalizeUsername(value) {
 
 export async function registerAccount(form) {
   const username = normalizeUsername(form.username)
+  if (!['personal', 'business'].includes(form.mode) || !form.name?.trim() || !form.phone?.trim() || (form.mode === 'business' && !form.businessName?.trim())) {
+    const error = new Error('account-details-required')
+    error.code = 'account-details-required'
+    throw error
+  }
   if (username.length < 3 || username.length > 24) {
     const error = new Error('username-invalid')
     error.code = 'username-invalid'
@@ -98,6 +105,12 @@ export async function updateAccountProfile(profile) {
     error.code = 'username-invalid'
     throw error
   }
+  let avatarUrl = profile.avatarUrl || ''
+  if (avatarUrl.startsWith('data:')) {
+    const imageRef = storageRef(storage, `users/${profile.uid}/avatar-${Date.now()}.jpg`)
+    await uploadString(imageRef, avatarUrl, 'data_url', { contentType: 'image/jpeg' })
+    avatarUrl = await getDownloadURL(imageRef)
+  }
   await runTransaction(db, async (transaction) => {
     const userRef = doc(db, 'users', profile.uid)
     const userSnapshot = await transaction.get(userRef)
@@ -117,10 +130,11 @@ export async function updateAccountProfile(profile) {
       name: profile.name.trim(),
       mode: profile.mode,
       businessName: profile.businessName || '',
-      avatarUrl: profile.avatarUrl || '',
+      avatarUrl,
       updatedAt: serverTimestamp(),
     }, { merge: true })
   })
+  return { ...profile, username, avatarUrl }
 }
 
 export function watchTravelers(currentUid, onChange, onError) {
@@ -151,4 +165,38 @@ export async function sendChatMessage(senderUid, recipientUid, text) {
   const conversationId = getConversationId(senderUid, recipientUid)
   await ensureConversation(senderUid, recipientUid)
   await addDoc(collection(db, 'chats', conversationId, 'messages'), { senderUid, text: text.trim(), createdAt: serverTimestamp() })
+}
+
+export function watchPlaceReviews(placeId, onChange, onError) {
+  const reviews = query(collection(db, 'placeReviews'), where('placeId', '==', placeId))
+  return onSnapshot(reviews, (snapshot) => {
+    onChange(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)))
+  }, onError)
+}
+
+export async function savePlaceReview(placeId, review) {
+  if (!auth.currentUser) throw new Error('auth-required')
+  await addDoc(collection(db, 'placeReviews'), {
+    placeId,
+    userUid: auth.currentUser.uid,
+    author: review.author,
+    rating: review.rating,
+    text: review.text.trim(),
+    date: review.date,
+    verifiedAt: review.verifiedAt,
+    createdAt: serverTimestamp(),
+  })
+}
+
+export function watchBusinessReplies(businessId, onChange, onError) {
+  return onSnapshot(collection(db, 'businessProfiles', businessId, 'reviewReplies'), (snapshot) => {
+    onChange(Object.fromEntries(snapshot.docs.map((entry) => [entry.id, entry.data().message])))
+  }, onError)
+}
+
+export async function saveBusinessReply(businessId, reviewId, message) {
+  await setDoc(doc(db, 'businessProfiles', businessId, 'reviewReplies', reviewId), {
+    message: message.trim(),
+    updatedAt: serverTimestamp(),
+  })
 }

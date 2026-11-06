@@ -21,7 +21,7 @@
         <template v-if="!isLogin">
           <q-input v-model="form.name" outlined rounded autocomplete="name" :label="isEnglish ? 'Full name *' : 'Nombre completo *'" required minlength="2" />
           <q-input v-model="form.username" outlined rounded prefix="@" autocomplete="username" :label="isEnglish ? 'Unique username *' : 'Nombre de usuario único *'" :hint="isEnglish ? 'Letters, numbers, dots, underscores, or hyphens' : 'Letras, números, puntos, guiones y guiones bajos'" required minlength="3" maxlength="24" pattern="[A-Za-z0-9._-]+" />
-          <q-select v-model="form.mode" outlined rounded emit-value map-options :options="modeOptions" :label="isEnglish ? 'Account type *' : 'Tipo de cuenta *'" required />
+          <q-select v-model="form.mode" outlined rounded emit-value map-options :options="modeOptions" :label="isEnglish ? 'Account type *' : 'Tipo de cuenta *'" :rules="[value => Boolean(value) || (isEnglish ? 'Choose an account type' : 'Elige el tipo de cuenta')]" required />
           <q-input v-if="form.mode === 'business'" v-model="form.businessName" outlined rounded autocomplete="organization" :label="isEnglish ? 'Business name *' : 'Nombre de la empresa *'" required />
           <q-input v-model="form.phone" outlined rounded type="tel" autocomplete="tel" :label="isEnglish ? 'Phone number *' : 'Número de teléfono *'" required minlength="7" />
         </template>
@@ -52,7 +52,7 @@ const props = defineProps({
 const emit = defineEmits(['login', 'register', 'logout'])
 const isLogin = ref(true)
 const showPassword = ref(false)
-const form = reactive({ name: '', username: '', mode: 'personal', businessName: '', phone: '', email: '', password: '', confirmPassword: '' })
+const form = reactive({ name: '', username: '', mode: '', businessName: '', phone: '', email: '', password: '', confirmPassword: '' })
 const modeOptions = computed(() => [
   { label: props.isEnglish ? 'Personal' : 'Personal', value: 'personal' },
   { label: props.isEnglish ? 'Business' : 'Empresarial', value: 'business' },

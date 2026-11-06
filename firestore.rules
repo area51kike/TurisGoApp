@@ -54,6 +54,30 @@ service cloud.firestore {
       allow update: if signedIn()
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == request.auth.uid;
+
+      match /reviewReplies/{reviewId} {
+        allow read: if true;
+        allow create, update: if signedIn()
+          && get(/databases/$(database)/documents/businessProfiles/$(businessId)).data.ownerUid == request.auth.uid
+          && request.resource.data.message is string
+          && request.resource.data.message.size() > 0
+          && request.resource.data.message.size() <= 2000;
+        allow delete: if false;
+      }
+    }
+    match /placeReviews/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.userUid == request.auth.uid
+        && request.resource.data.placeId is string
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 4000
+        && request.resource.data.verifiedAt is string;
+      allow update, delete: if false;
     }
     match /{document=**} { allow read, write: if false; }
   }

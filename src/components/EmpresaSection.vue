@@ -93,6 +93,8 @@
             v-model="draft.name"
             outlined
             rounded
+            :rules="[requiredRule]"
+            lazy-rules
             :label="isEnglish ? 'Business name' : 'Nombre del negocio'"
           />
           <q-select
@@ -101,6 +103,8 @@
             rounded
             emit-value
             map-options
+            :rules="[requiredRule]"
+            lazy-rules
             :options="typeOptions"
             :label="isEnglish ? 'Listing type' : 'Tipo de ficha'"
           />
@@ -108,6 +112,8 @@
             v-model="draft.region"
             outlined
             rounded
+            :rules="[requiredRule]"
+            lazy-rules
             :label="isEnglish ? 'City / department' : 'Ciudad / departamento'"
           />
           <q-input
@@ -117,12 +123,16 @@
             type="textarea"
             autogrow
             maxlength="400"
+            :rules="[requiredRule]"
+            lazy-rules
             :label="isEnglish ? 'Description' : 'Descripción'"
           />
           <q-input
             v-model="draft.priceLabel"
             outlined
             rounded
+            :rules="[requiredRule]"
+            lazy-rules
             :label="isEnglish ? 'Price / rate' : 'Precio / tarifa'"
             :hint="
               isEnglish
@@ -130,22 +140,7 @@
                 : 'Ejemplo: desde $25 por noche o consultar fechas'
             "
           />
-          <q-input
-            v-model.number="draft.commissionRate"
-            outlined
-            rounded
-            type="number"
-            min="0"
-            max="30"
-            step="0.5"
-            suffix="%"
-            :label="isEnglish ? 'TURISGO commission per booking' : 'Comisión TURISGO por reserva'"
-            :hint="
-              isEnglish
-                ? 'Agreement preview only; not billed.'
-                : 'Vista previa del acuerdo; aún no se cobra.'
-            "
-          />
+          <div class="commission-note"><q-icon name="info" /><span>{{ isEnglish ? 'TURISGO charges a fixed 3% service fee on bookings.' : 'TURISGO cobra una comisión fija del 3% por reserva.' }}</span></div>
           <q-input
             v-model="draft.websiteUrl"
             outlined
@@ -242,6 +237,7 @@
                 : 'Sucursales / ubicaciones (una por línea)'
             "
           />
+          <p class="business-save-note"><q-icon name="checklist" />{{ isEnglish ? 'Required to publish: name, listing type, city, description, a price or “check dates” label, at least one photo, and exact map coordinates.' : 'Obligatorio para publicar: nombre, tipo de ficha, ciudad, descripción, precio o “consultar fechas”, al menos una foto y coordenadas exactas del mapa.' }}</p>
           <q-btn
             unelevated
             rounded
@@ -264,8 +260,8 @@
             <q-icon name="info" />
             {{
               isEnglish
-                ? 'Photos are compressed and saved with your listing in Firestore. If Firestore rules reject the write, the draft remains on this device.'
-                : 'Las fotos se comprimen y se guardan con tu ficha en Firestore. Si las reglas de Firestore rechazan el guardado, el borrador queda en este dispositivo.'
+                ? 'Photos are resized and uploaded to Firebase Storage. Firestore saves their URLs with the listing.'
+                : 'Las fotos se reducen y se suben a Firebase Storage. Firestore guarda sus URLs junto con la ficha.'
             }}
           </p>
         </div>
@@ -361,16 +357,28 @@ watch(
 )
 
 const typeOptions = computed(() => [
-  { label: props.isEnglish ? 'Tourist destination' : 'Lugar turístico', value: 'destination' },
   { label: props.isEnglish ? 'Hotel / accommodation' : 'Hotel / alojamiento', value: 'hotel' },
+  { label: props.isEnglish ? 'Beach' : 'Playa', value: 'beach' },
+  { label: props.isEnglish ? 'Park / nature reserve' : 'Parque / reserva natural', value: 'park' },
+  { label: props.isEnglish ? 'Volcano / mountain' : 'Volcán / montaña', value: 'volcano' },
+  { label: props.isEnglish ? 'Lake / river' : 'Lago / río', value: 'lake' },
+  { label: props.isEnglish ? 'Town / cultural site' : 'Pueblo / sitio cultural', value: 'town' },
+  { label: props.isEnglish ? 'Waterfall' : 'Cascada', value: 'waterfall' },
+  { label: props.isEnglish ? 'Viewpoint' : 'Mirador', value: 'viewpoint' },
+  { label: props.isEnglish ? 'Museum' : 'Museo', value: 'museum' },
+  { label: props.isEnglish ? 'Restaurant' : 'Restaurante', value: 'restaurant' },
+  { label: props.isEnglish ? 'Tour / activity' : 'Tour / actividad', value: 'tour' },
+  { label: props.isEnglish ? 'Other tourist place' : 'Otro lugar turístico', value: 'destination' },
 ])
 const isPublishable = computed(() =>
   Boolean(
     draft.name.trim() &&
+    draft.type &&
     draft.region.trim() &&
     draft.description.trim() &&
+    draft.priceLabel.trim() &&
     photoUrls.value.length > 0 &&
-    (draft.mapUrl?.trim() || (draft.latitude && draft.longitude)),
+    (validMapCoordinates(draft.mapUrl) || (draft.latitude && draft.longitude)),
   ),
 )
 const photoUrls = computed(() => photos.value.filter(Boolean))
@@ -383,6 +391,17 @@ const branches = computed(() =>
 
 function pickFiles() {
   fileInput.value?.click()
+}
+
+function requiredRule(value) {
+  return Boolean(String(value ?? '').trim()) || (props.isEnglish ? 'Required field' : 'Campo obligatorio')
+}
+
+function validMapCoordinates(value) {
+  if (!value) return false
+  return /@-?\d+(?:\.\d+)?,\s*-?\d+(?:\.\d+)?/.test(value)
+    || /!3d-?\d+(?:\.\d+)?!4d-?\d+(?:\.\d+)?/.test(value)
+    || /[?&]q=-?\d+(?:\.\d+)?,\s*-?\d+(?:\.\d+)?/.test(value)
 }
 
 async function onFilesSelected(event) {
@@ -412,7 +431,7 @@ function save() {
     name: draft.name.trim(),
     description: draft.description.trim(),
     region: draft.region.trim(),
-    commissionRate: Math.min(30, Math.max(0, Number(draft.commissionRate) || 0)),
+    commissionRate: 3,
     photoUrls: photoUrls.value,
     branches: branches.value,
     coordinates:

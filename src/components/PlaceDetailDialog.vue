@@ -158,11 +158,13 @@
         <ResenasSection
           :is-english="isEnglish"
           :visited="visited"
+          :is-authenticated="isAuthenticated"
           :checking-visit="checkingVisit"
           :reviews="reviews"
           :rating="place.rating"
           @verify-visit="$emit('verify-visit', place)"
           @submit-review="$emit('submit-review', $event)"
+          @request-account="$emit('request-account')"
         />
       </main>
       <footer class="detail-footer">
@@ -190,6 +192,7 @@ const props = defineProps({
   isEnglish: Boolean,
   isSaved: Boolean,
   visited: Boolean,
+  isAuthenticated: Boolean,
   checkingVisit: Boolean,
   reviews: { type: Array, default: () => [] },
 })
@@ -200,6 +203,7 @@ defineEmits([
   'verify-visit',
   'submit-review',
   'open-directions',
+  'request-account',
 ])
 
 const slide = ref(0)
