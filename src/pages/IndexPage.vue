@@ -95,6 +95,7 @@
         :is-english="isEnglish"
         :places="visiblePlaces"
         :selected-map-place="selectedMapPlace"
+        :route-request="routeRequest"
         @update:selected-map-place="selectedMapPlace = $event"
         @select-place="openPlace"
       />
@@ -158,6 +159,7 @@
       :checking-visit="checkingVisit"
       :reviews="selectedReviews"
       @toggle-save="toggleSaved"
+      @open-directions="openDirections"
       @add-to-budget="addPlaceToBudget"
       @verify-visit="verifyVisit"
       @submit-review="submitReview"
@@ -416,6 +418,7 @@ const selectedNav = ref('home')
 const searchQuery = ref('')
 const searchFilter = ref('all')
 const selectedMapPlace = ref(catalogPlaces[0])
+const routeRequest = ref(0)
 const selectedPlace = ref(null)
 const detailOpen = ref(false)
 const settingsOpen = ref(false)
@@ -470,6 +473,7 @@ const tutorialButtonLabel = computed(() =>
       : 'Siguiente paso',
 )
 const navigationItems = [
+  { key: 'map', icon: 'map', es: 'Mapa', en: 'Map' },
   { key: 'home', icon: 'home', es: 'Inicio', en: 'Home' },
   { key: 'search', icon: 'search', es: 'Buscar', en: 'Search' },
   { key: 'saved', icon: 'favorite', es: 'Guardados', en: 'Saved' },
@@ -600,7 +604,9 @@ onMounted(async () => {
 
 function navigateTo(screen) {
   currentScreen.value = screen
-  selectedNav.value = ['home', 'search', 'saved', 'profile'].includes(screen) ? screen : 'profile'
+  selectedNav.value = ['home', 'search', 'map', 'saved', 'profile'].includes(screen)
+    ? screen
+    : 'profile'
   if (screen === 'search') searchFilter.value = 'all'
 }
 
@@ -620,7 +626,12 @@ function openPlace(place) {
   selectedPlace.value = place
   detailOpen.value = true
 }
-
+function openDirections(place) {
+  selectedMapPlace.value = place
+  detailOpen.value = false
+  navigateTo('map')
+  routeRequest.value += 1
+}
 function toggleSaved(id) {
   savedIds.value = savedIds.value.includes(id)
     ? savedIds.value.filter((savedId) => savedId !== id)
