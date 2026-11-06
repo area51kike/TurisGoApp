@@ -27,11 +27,12 @@
 
     <div class="budget-block">
       <h2>{{ isEnglish ? 'Other trip costs' : 'Otros gastos del viaje' }}</h2>
-      <q-input :model-value="costs.food" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Food & drinks' : 'Comida y bebidas'" prefix="$" @update:model-value="updateCost('food', $event)" />
-      <q-input :model-value="costs.lodging" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Lodging' : 'Hospedaje'" prefix="$" @update:model-value="updateCost('lodging', $event)" />
-      <q-input :model-value="costs.extras" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Tickets & other expenses' : 'Entradas y otros gastos'" prefix="$" @update:model-value="updateCost('extras', $event)" />
+      <p v-if="!selectedPlaces.length" class="budget-lock-note">{{ isEnglish ? 'Choose at least one place first. Free admission is $0; estimated travel is shown separately.' : 'Primero elige al menos un lugar. Si la entrada es gratis, cuenta $0; el viaje estimado aparece aparte.' }}</p>
+      <q-input :model-value="costs.food" :disable="!selectedPlaces.length" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Food & drinks' : 'Comida y bebidas'" prefix="$" @update:model-value="updateCost('food', $event)" />
+      <q-input :model-value="costs.lodging" :disable="!selectedPlaces.length" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Lodging' : 'Hospedaje'" prefix="$" @update:model-value="updateCost('lodging', $event)" />
+      <q-input :model-value="costs.extras" :disable="!selectedPlaces.length" type="number" min="0" step="1" outlined rounded :label="isEnglish ? 'Admission & other expenses' : 'Entradas y otros gastos'" prefix="$" @update:model-value="updateCost('extras', $event)" />
     </div>
-    <div class="budget-tip"><q-icon name="lightbulb" /><span>{{ isEnglish ? 'Travel costs are sample estimates from San Salvador. Set your starting point with your group before deciding.' : 'El costo de viaje es un estimado de muestra desde San Salvador. Confirma el punto de salida antes de decidir.' }}</span></div>
+    <div v-if="selectedPlaces.length" class="budget-tip"><q-icon name="lightbulb" /><span>{{ isEnglish ? 'Free parks and public areas have $0 admission unless a listing states a fee. Travel is estimated separately from San Salvador.' : 'Los parques y espacios públicos gratuitos tienen entrada de $0 salvo que la ficha indique una tarifa. El viaje se estima aparte desde San Salvador.' }}</span></div>
   </section>
 </template>
 

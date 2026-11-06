@@ -43,8 +43,18 @@ const query = ref(props.initialQuery)
 const activeFilter = ref(props.initialFilter)
 const filters = [
   { key: 'all', es: 'Todo', en: 'All' },
-  { key: 'destination', es: 'Lugares', en: 'Places' },
   { key: 'hotel', es: 'Hoteles', en: 'Hotels' },
+  { key: 'destination', es: 'Lugares', en: 'Places' },
+  { key: 'beach', es: 'Playas', en: 'Beaches' },
+  { key: 'park', es: 'Parques', en: 'Parks' },
+  { key: 'volcano', es: 'Volcanes', en: 'Volcanoes' },
+  { key: 'lake', es: 'Lagos y ríos', en: 'Lakes and rivers' },
+  { key: 'town', es: 'Pueblos', en: 'Towns' },
+  { key: 'waterfall', es: 'Cascadas', en: 'Waterfalls' },
+  { key: 'viewpoint', es: 'Miradores', en: 'Viewpoints' },
+  { key: 'museum', es: 'Museos', en: 'Museums' },
+  { key: 'restaurant', es: 'Restaurantes', en: 'Restaurants' },
+  { key: 'tour', es: 'Tours', en: 'Tours' },
 ]
 
 watch(() => props.initialQuery, (value) => { query.value = value })
@@ -53,8 +63,22 @@ watch(() => props.initialFilter, (value) => { activeFilter.value = value })
 const resultPlaces = computed(() => {
   const normalized = query.value.trim().toLocaleLowerCase()
   return props.places.filter((place) => {
-    const matchesType = activeFilter.value === 'all' || place.type === activeFilter.value
     const text = `${place.name} ${place.nameEn} ${place.region} ${place.category} ${place.categoryEn}`.toLocaleLowerCase()
+    const aliases = {
+      beach: ['playa', 'beach', 'costa', 'surf'],
+      park: ['parque', 'park', 'reserva'],
+      volcano: ['volcán', 'volcan', 'volcano', 'montaña'],
+      lake: ['lago', 'lake', 'río', 'rio', 'river'],
+      town: ['pueblo', 'town', 'cultural', 'colonial'],
+      waterfall: ['cascada', 'waterfall'],
+      viewpoint: ['mirador', 'viewpoint'],
+      museum: ['museo', 'museum', 'histórico', 'historical'],
+      restaurant: ['restaurante', 'restaurant', 'café', 'cafe'],
+      tour: ['tour', 'actividad', 'activity'],
+    }
+    const matchesType = activeFilter.value === 'all'
+      || place.type === activeFilter.value
+      || (aliases[activeFilter.value] || []).some((term) => text.includes(term))
     return matchesType && (!normalized || text.includes(normalized))
   })
 })
