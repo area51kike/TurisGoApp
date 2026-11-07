@@ -1091,6 +1091,11 @@ button {
 .budget-block .q-field__label {
   color: var(--text-muted);
 }
+.business-form .q-field__native,
+.business-form .q-field__input,
+.business-form .q-select__dropdown-icon {
+  color: var(--text-primary) !important;
+}
 .profile-form input,
 .business-form input,
 .business-form textarea,
@@ -1783,6 +1788,7 @@ button {
   width: 29px;
   font-size: 17px;
 }
+.font-role-options { display: grid; gap: 6px; }
 .settings-dialog__actions {
   display: flex;
   justify-content: flex-end;
@@ -2022,6 +2028,22 @@ button {
 .commission-note .q-icon { color: var(--gold); }
 .q-menu { background: var(--surface) !important; color: var(--text-primary) !important; }
 .q-menu .q-item { color: var(--text-primary); }
+.business-type-options {
+  border: 1px solid rgba(0, 145, 224, 0.55);
+  border-radius: 14px;
+  color: #f4f9fd !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+  overscroll-behavior: contain;
+}
+.business-type-options .q-item {
+  min-height: 48px;
+  color: #f4f9fd !important;
+}
+.business-type-options .q-item--active,
+.business-type-options .q-item:hover {
+  background: rgba(0, 145, 224, 0.28);
+  color: #fff !important;
+}
 .font-catalog-popup {
   border: 1px solid var(--line, rgba(0, 145, 224, 0.35));
   border-radius: 14px;
@@ -2041,6 +2063,13 @@ button {
 .font-catalog-popup .q-item__label { color: inherit; }
 .font-catalog-popup .q-item__label--caption { opacity: 0.72; }
 @media (max-width: 599px) {
+  .font-role-options {
+    max-height: 174px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2px 3px 2px 0;
+    scrollbar-width: thin;
+  }
   .font-catalog-popup {
     width: min(88vw, 420px);
     max-height: min(38dvh, 280px) !important;

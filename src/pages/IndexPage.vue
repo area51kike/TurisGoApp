@@ -226,19 +226,21 @@
         <template v-if="!customFontEditorOpen">
         <div v-for="role in fontRoles" :key="role.key" class="settings-choice-group">
           <div class="settings-label">{{ isEnglish ? role.en : role.es }}</div>
-          <div v-for="font in fontOptions" :key="`${role.key}-${font.value}`" class="appearance-choice-row">
-            <button
-              :class="['font-choice', { selected: settingsDraft.fonts[role.key] === font.value }]"
-              @click="selectFont(role.key, font.value)"
-            >
-              <span :style="{ fontFamily: font.value }">{{ role.sample }}</span>
-              <strong>{{ isEnglish ? font.en : font.es }}</strong>
-              <q-icon v-if="settingsDraft.fonts[role.key] === font.value" name="check_circle" />
-            </button>
-            <q-btn v-if="font.name" flat round dense icon="delete" class="appearance-choice-delete"
-              :disable="fontOptions.length <= 1"
-              :aria-label="isEnglish ? `Delete ${font.en} typeface` : `Eliminar fuente ${font.es}`"
-              @click="deleteCustomFont(font.value)" />
+          <div class="font-role-options">
+            <div v-for="font in fontOptions" :key="`${role.key}-${font.value}`" class="appearance-choice-row">
+              <button
+                :class="['font-choice', { selected: settingsDraft.fonts[role.key] === font.value }]"
+                @click="selectFont(role.key, font.value)"
+              >
+                <span :style="{ fontFamily: font.value }">{{ role.sample }}</span>
+                <strong>{{ isEnglish ? font.en : font.es }}</strong>
+                <q-icon v-if="settingsDraft.fonts[role.key] === font.value" name="check_circle" />
+              </button>
+              <q-btn v-if="font.name" flat round dense icon="delete" class="appearance-choice-delete"
+                :disable="fontOptions.length <= 1"
+                :aria-label="isEnglish ? `Delete ${font.en} typeface` : `Eliminar fuente ${font.es}`"
+                @click="deleteCustomFont(font.value)" />
+            </div>
           </div>
           <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'" @click="openCustomFontEditor(role.key)" />
         </div>
@@ -607,17 +609,21 @@ const fontCatalog = [
   { id: 'bebas-neue', name: 'Bebas Neue', family: '"Bebas Neue", sans-serif' },
   { id: 'montserrat', name: 'Montserrat', family: '"Montserrat", sans-serif' },
   { id: 'poppins', name: 'Poppins', family: '"Poppins", sans-serif' },
+  { id:'cocogoose', name: 'Cocogoose', family: '"Cocogoose", sans-serif'},
 ]
-const oldSelectedFont = storedCustomFonts.find((font) =>
-  font.value === preferences.value.font && removedCatalogFontNames.has(font.name?.toLowerCase()),
-)
-if (oldSelectedFont) {
-  preferences.value = { ...preferences.value, font: builtInFontOptions[0].value }
+const oldSelectedFont = storedCustomFonts.find((font) => removedCatalogFontNames.has(font.name?.toLowerCase()))
+if (oldSelectedFont && Object.values(preferences.value.fonts).some((family) => family === oldSelectedFont.value)) {
+  const fonts = Object.fromEntries(Object.entries(preferences.value.fonts).map(([role, family]) => [role, family === oldSelectedFont.value ? '"DM Sans", system-ui, sans-serif' : family]))
+  preferences.value = { ...preferences.value, fonts }
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
 }
 
 const allThemeOptions = computed(() => [...themeOptions, ...customThemes.value])
 const fontOptions = computed(() => [...builtInFontOptions, ...customFonts.value])
+const filteredFontCatalog = computed(() => {
+  const query = fontCatalogSearch.value.trim().toLocaleLowerCase()
+  return fontCatalog.filter((font) => font.name.toLocaleLowerCase().includes(query))
+})
 const customFontPreviewFamily = computed(() => customFontDraft.value.family || 'sans-serif')
 const appAppearanceStyle = computed(() => {
   const selected = allThemeOptions.value.find((theme) => theme.value === preferences.value.theme)

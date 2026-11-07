@@ -99,10 +99,14 @@
           />
           <q-select
             v-model="draft.type"
+            class="business-type-select"
             outlined
             rounded
             emit-value
             map-options
+            behavior="menu"
+            popup-content-class="business-type-options"
+            :popup-content-style="typeSelectPopupStyle"
             :rules="[requiredRule]"
             lazy-rules
             :options="typeOptions"
@@ -360,6 +364,12 @@ const props = defineProps({
 const emit = defineEmits(['activate-demo', 'save-profile', 'reply-review'])
 const $q = useQuasar()
 const MAX_PHOTOS = 4
+const typeSelectPopupStyle = {
+  backgroundColor: '#08243a',
+  color: '#f4f9fd',
+  maxHeight: 'min(48dvh, 360px)',
+  overflowY: 'auto',
+}
 const draft = reactive({ ...props.profile })
 const photos = ref([...(props.profile.photoUrls || [])])
 const uploading = ref(false)
