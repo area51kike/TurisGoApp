@@ -263,33 +263,31 @@
           <div><span class="eyebrow">{{ isEnglish ? 'CUSTOM TYPEFACE' : 'TIPOGRAFÍA PERSONALIZADA' }}</span><h2>{{ isEnglish ? 'Add a typeface' : 'Agregar tipografía' }}</h2></div>
           <q-btn flat round icon="close" :aria-label="isEnglish ? 'Close' : 'Cerrar'" @click="cancelCustomFont" />
         </div>
-        <q-select
-          v-model="customFontDraft.catalogId"
+        <q-input
+          v-model="fontCatalogSearch"
           outlined
           rounded
-          use-input
-          input-debounce="0"
-          :options="fontCatalog"
-          option-label="name"
-          option-value="id"
-          emit-value
-          map-options
-          :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
-          popup-content-class="font-catalog-popup"
-          :popup-content-style="fontCatalogPopupStyle"
-          :label="isEnglish ? 'Search and choose a typeface' : 'Busca y elige una tipografía'"
-          :hint="isEnglish ? 'Type to filter the catalog' : 'Escribe para filtrar el catálogo'"
-          @update:model-value="selectCatalogFont"
-        >
-          <template #option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label :style="{ fontFamily: scope.opt.family }">{{ scope.opt.name }}</q-item-label>
-                <q-item-label caption :style="{ fontFamily: scope.opt.family }">Aa Bb Cc Ññ 123</q-item-label>
-              </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
+          clearable
+          :label="isEnglish ? 'Search typefaces' : 'Buscar tipografías'"
+          :hint="isEnglish ? 'Choose by name and preview' : 'Elige por nombre y mira la muestra'"
+        />
+        <div class="font-catalog-list" role="listbox" :aria-label="isEnglish ? 'Available typefaces' : 'Tipografías disponibles'">
+          <button
+            v-for="font in filteredFontCatalog"
+            :key="font.id"
+            type="button"
+            role="option"
+            :aria-selected="customFontDraft.catalogId === font.id"
+            :class="['font-catalog-option', { selected: customFontDraft.catalogId === font.id }]"
+            @click="selectCatalogFont(font.id)"
+          >
+            <strong>{{ font.name }}</strong>
+            <span :style="{ fontFamily: font.family }">Aa Bb Cc Ññ 123</span>
+          </button>
+          <p v-if="!filteredFontCatalog.length" class="font-catalog-empty">
+            {{ isEnglish ? 'No typefaces match your search.' : 'No hay tipografías con ese nombre.' }}
+          </p>
+        </div>
         <div class="font-live-preview" :style="{ fontFamily: customFontPreviewFamily }"><small>{{ isEnglish ? 'PREVIEW' : 'VISTA PREVIA' }}</small><strong>Aa Bb Cc Ññ 123</strong><span>{{ isEnglish ? 'A quick look at this typeface.' : 'Así se vería esta tipografía.' }}</span></div>
         <div class="settings-dialog__actions"><q-btn flat rounded :label="isEnglish ? 'Cancel' : 'Cancelar'" @click="cancelCustomFont" /><q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save typeface' : 'Guardar fuente'" @click="saveCustomFont" /></div>
       </q-card>
@@ -519,6 +517,7 @@ const customThemeEditorOpen = ref(false)
 const newThemeDraft = ref({ name: '', background: '#08243a', accent: '#1688e8', highlight: '#f2b84b' })
 const customFontEditorOpen = ref(false)
 const customFontDraft = ref({ name: '', family: '' })
+const fontCatalogSearch = ref('')
 const paletteFields = [
   { key: 'background', es: 'Fondo', en: 'Background' },
   { key: 'accent', es: 'Color principal', en: 'Accent color' },
@@ -1014,12 +1013,14 @@ function deleteCustomTheme(themeId) {
 function openCustomFontEditor(role = 'title') {
   customFontRole.value = role
   customFontDraft.value = { catalogId: '', name: '', family: '' }
+  fontCatalogSearch.value = ''
   customFontEditorOpen.value = true
 }
 
 function cancelCustomFont() {
   customFontEditorOpen.value = false
   customFontDraft.value = { catalogId: '', name: '', family: '' }
+  fontCatalogSearch.value = ''
 }
 
 function selectCatalogFont(fontId) {

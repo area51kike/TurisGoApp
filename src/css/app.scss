@@ -1849,6 +1849,35 @@ button {
 }
 .font-live-preview strong { font-size: 25px; }
 .font-live-preview span { color: var(--text-muted); font-size: 12px; }
+.font-catalog-list {
+  display: grid;
+  gap: 7px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 2px 3px 2px 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.font-catalog-option {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-height: 58px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--app-bg);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.font-catalog-option.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.font-catalog-option strong { font-size: 11px; font-weight: 700; }
+.font-catalog-option span { font-size: 17px; line-height: 1.15; }
+.font-catalog-empty { margin: 4px 0; color: var(--text-muted); font-size: 11px; }
 .profile-account-entry {
   width: 100%;
   display: flex;
