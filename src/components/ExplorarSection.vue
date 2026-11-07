@@ -34,6 +34,9 @@
           :model-value="selectedMapPlace"
           :options="places"
           option-label="name"
+          behavior="menu"
+          popup-content-class="map-destination-options"
+          :popup-content-style="destinationPopupStyle"
           outlined
           rounded
           :label="isEnglish ? 'Destination' : 'Destino'"
@@ -199,6 +202,12 @@ const props = defineProps({
 const emit = defineEmits(['update:selectedMapPlace', 'select-place'])
 
 const $q = useQuasar()
+const destinationPopupStyle = {
+  backgroundColor: '#08243a',
+  color: '#f4f9fd',
+  maxHeight: 'min(48dvh, 360px)',
+  overflowY: 'auto',
+}
 const tab = ref('map')
 const route = ref(null)
 const loading = ref(false)
