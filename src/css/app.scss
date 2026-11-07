@@ -1332,6 +1332,9 @@ button {
   color: var(--accent);
   font-size: 15px;
 }
+.chat-note > span { flex: 1; }
+.chat-note--error,
+.chat-note--error .q-icon { color: #ffb8bd; }
 .chat-room {
   min-height: 380px;
   display: flex;

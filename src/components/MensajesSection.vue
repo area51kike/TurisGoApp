@@ -40,7 +40,11 @@
         <q-input v-model="draftMessage" outlined rounded dense :placeholder="isEnglish ? 'Write a message…' : 'Escribe un mensaje…'" />
         <q-btn round unelevated color="primary" icon="send" type="submit" :disable="!draftMessage.trim()" :aria-label="isEnglish ? 'Send message' : 'Enviar mensaje'" />
       </form>
-      <div class="chat-note"><q-icon name="cloud_done" /> {{ isEnglish ? 'Messages sync through Firebase Firestore.' : 'Los mensajes se sincronizan con Firebase Firestore.' }}</div>
+      <div :class="['chat-note', { 'chat-note--error': messageError }]">
+        <q-icon :name="messageError ? 'cloud_off' : 'cloud_done'" />
+        <span>{{ messageError || (isEnglish ? 'Messages sync live through Firebase Firestore.' : 'Los mensajes se sincronizan en tiempo real con Firebase Firestore.') }}</span>
+        <q-btn v-if="messageError" flat dense no-caps :label="isEnglish ? 'Retry' : 'Reintentar conexión'" @click="retryMessages" />
+      </div>
     </div>
     </template>
   </section>
@@ -62,27 +66,49 @@ const activePerson = ref(null)
 const draftMessage = ref('')
 const messagesElement = ref(null)
 const chatMessages = ref([])
+const messageError = ref('')
+const retryCount = ref(0)
 let stopMessages
+let subscriptionId = 0
 
 const matches = computed(() => {
   const term = query.value.trim().replace(/^@/, '').toLocaleLowerCase()
   return props.people.filter((person) => !term || `${person.name} ${person.username} ${person.city}`.toLocaleLowerCase().includes(term))
 })
-watch(() => [activePerson.value?.uid, props.currentUser.uid], ([otherUid, currentUid]) => {
+watch(() => [activePerson.value?.uid, props.currentUser.uid, retryCount.value], ([otherUid, currentUid]) => {
+  const currentSubscriptionId = ++subscriptionId
   stopMessages?.()
+  stopMessages = undefined
   chatMessages.value = []
+  messageError.value = ''
   if (otherUid && currentUid) {
     ensureConversation(currentUid, otherUid)
       .then(() => {
-        if (activePerson.value?.uid === otherUid && props.currentUser.uid === currentUid) {
-          stopMessages = watchMessages(currentUid, otherUid, (messages) => { chatMessages.value = messages })
+        if (currentSubscriptionId === subscriptionId && activePerson.value?.uid === otherUid && props.currentUser.uid === currentUid) {
+          stopMessages = watchMessages(currentUid, otherUid, (messages) => {
+            chatMessages.value = messages
+            messageError.value = ''
+          }, (error) => {
+            console.error('Could not sync chat messages in real time:', error)
+            messageError.value = props.isEnglish
+              ? 'Could not sync this conversation. Check your connection and retry.'
+              : 'No se pudo sincronizar esta conversación. Revisa tu conexión e inténtalo de nuevo.'
+          })
         }
       })
-      .catch((error) => console.warn('Could not open conversation:', error))
+      .catch((error) => {
+        console.error('Could not open conversation:', error)
+        if (currentSubscriptionId === subscriptionId) {
+          messageError.value = props.isEnglish
+            ? 'Could not connect to this conversation. Check your connection and retry.'
+            : 'No se pudo conectar con esta conversación. Revisa tu conexión e inténtalo de nuevo.'
+        }
+      })
   }
 }, { immediate: true })
 
 onBeforeUnmount(() => {
+  subscriptionId += 1
   activePerson.value = null
   stopMessages?.()
 })
@@ -97,6 +123,10 @@ function send() {
   if (!text || !activePerson.value) return
   emit('send-message', { uid: activePerson.value.uid, text })
   draftMessage.value = ''
+}
+
+function retryMessages() {
+  retryCount.value += 1
 }
 
 function initials(name = '') {
