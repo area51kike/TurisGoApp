@@ -274,6 +274,7 @@
           option-value="id"
           emit-value
           map-options
+          :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
           popup-content-class="font-catalog-popup"
           :popup-content-style="fontCatalogPopupStyle"
           :label="isEnglish ? 'Search and choose a typeface' : 'Busca y elige una tipografía'"

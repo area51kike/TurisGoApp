@@ -2010,6 +2010,13 @@ button {
 }
 .font-catalog-popup .q-item__label { color: inherit; }
 .font-catalog-popup .q-item__label--caption { opacity: 0.72; }
+@media (max-width: 599px) {
+  .font-catalog-popup {
+    width: min(88vw, 420px);
+    max-height: min(38dvh, 280px) !important;
+  }
+  .font-catalog-popup .q-item { min-height: 54px; }
+}
 @media (max-width: 390px) {
   .topbar-account { max-width: 136px; gap: 6px; padding-right: 7px; }
   .topbar-account__photo { flex-basis: 30px; width: 30px; height: 30px; }
