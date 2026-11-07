@@ -26,7 +26,6 @@
 
     <template v-else-if="isAuthenticated">
       <div v-if="!showPhotoStep" class="account-quick-actions">
-        <q-btn outline rounded no-caps icon="translate" :label="isEnglish ? 'Translate' : 'Traducir'" @click="$emit('toggle-language')" />
         <q-btn outline rounded no-caps icon="palette" :label="isEnglish ? 'Appearance' : 'Apariencia'" @click="$emit('open-settings')" />
       </div>
       <div class="account-card account-card--signed">
@@ -39,6 +38,15 @@
         <q-btn flat rounded no-caps icon="swap_horiz" :label="isEnglish ? 'Switch account' : 'Cambiar cuenta'" @click="$emit('switch-account')" />
         <q-btn flat rounded color="negative" icon="logout" :label="isEnglish ? 'Sign out' : 'Cerrar sesión'" @click="$emit('logout')" />
       </div>
+      <q-btn
+        class="account-business-link"
+        unelevated
+        rounded
+        color="primary"
+        icon="storefront"
+        :label="hasBusinessProfile ? (isEnglish ? 'Manage business' : 'Administrar empresa') : (isEnglish ? 'Add a business' : 'Añadir empresa')"
+        @click="$emit('open-business')"
+      />
       <div v-if="editingProfile" class="account-card account-edit-card">
         <h2>{{ isEnglish ? 'Edit your account details' : 'Editar datos de la cuenta' }}</h2>
         <div class="account-photo-edit">
@@ -67,6 +75,7 @@
     </template>
 
     <div v-else class="account-card">
+      <q-btn outline rounded no-caps icon="palette" :label="isEnglish ? 'Appearance' : 'Apariencia'" @click="$emit('open-settings')" />
       <div class="account-tabs">
         <button :class="{ active: isLogin }" @click="isLogin = true">{{ isEnglish ? 'Sign in' : 'Iniciar sesión' }}</button>
         <button :class="{ active: !isLogin }" @click="isLogin = false">{{ isEnglish ? 'Create account' : 'Crear cuenta' }}</button>
@@ -105,8 +114,9 @@ const props = defineProps({
   isAuthenticated: Boolean,
   userProfile: { type: Object, default: () => ({}) },
   showPhotoStep: Boolean,
+  hasBusinessProfile: Boolean,
 })
-const emit = defineEmits(['login', 'register', 'logout', 'switch-account', 'toggle-language', 'open-settings', 'update-profile', 'complete-photo', 'skip-photo'])
+const emit = defineEmits(['login', 'register', 'logout', 'switch-account', 'open-settings', 'open-business', 'update-profile', 'complete-photo', 'skip-photo'])
 const isLogin = ref(true)
 const showPassword = ref(false)
 const photoDraft = ref('')

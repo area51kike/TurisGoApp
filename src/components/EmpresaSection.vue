@@ -225,18 +225,39 @@
                 : 'La primera foto es la portada. Las fotos se reducen automáticamente.'
             }}</small>
           </div>
-          <q-input
-            v-model="branchesText"
-            outlined
-            rounded
-            type="textarea"
-            autogrow
-            :label="
-              isEnglish
-                ? 'Branches / locations (one per line)'
-                : 'Sucursales / ubicaciones (una por línea)'
-            "
-          />
+          <div class="branch-manager">
+            <span class="review-label">{{ isEnglish ? 'Branches and locations' : 'Sucursales y ubicaciones' }}</span>
+            <div class="branch-manager__add">
+              <q-input
+                v-model="newBranch"
+                outlined
+                rounded
+                :label="isEnglish ? 'Branch name or address' : 'Nombre o dirección de la sucursal'"
+                @keyup.enter="addBranch"
+              />
+              <q-btn
+                unelevated
+                rounded
+                color="primary"
+                icon="add"
+                :label="isEnglish ? 'Add branch' : 'Añadir sucursal'"
+                :disable="!newBranch.trim()"
+                @click="addBranch"
+              />
+            </div>
+            <div v-if="branches.length" class="branch-manager__list">
+              <q-chip
+                v-for="(branch, index) in branches"
+                :key="`${branch}-${index}`"
+                removable
+                color="primary"
+                text-color="white"
+                icon="place"
+                @remove="removeBranch(index)"
+              >{{ branch }}</q-chip>
+            </div>
+            <small v-else class="field-hint">{{ isEnglish ? 'Add the locations where customers can visit your business.' : 'Agrega las ubicaciones donde tus clientes pueden visitar el negocio.' }}</small>
+          </div>
           <p class="business-save-note"><q-icon name="checklist" />{{ isEnglish ? 'Required to publish: name, listing type, city, description, a price or “check dates” label, at least one photo, and exact map coordinates.' : 'Obligatorio para publicar: nombre, tipo de ficha, ciudad, descripción, precio o “consultar fechas”, al menos una foto y coordenadas exactas del mapa.' }}</p>
           <q-btn
             unelevated
@@ -343,7 +364,8 @@ const draft = reactive({ ...props.profile })
 const photos = ref([...(props.profile.photoUrls || [])])
 const uploading = ref(false)
 const fileInput = ref(null)
-const branchesText = ref((props.profile.branches || []).join('\n'))
+const branches = ref([...(props.profile.branches || [])])
+const newBranch = ref('')
 const replyDrafts = reactive({})
 
 watch(
@@ -351,7 +373,7 @@ watch(
   (profile) => {
     Object.assign(draft, profile)
     photos.value = [...(profile.photoUrls || [])]
-    branchesText.value = (profile.branches || []).join('\n')
+    branches.value = [...(profile.branches || [])]
   },
   { deep: true },
 )
@@ -382,15 +404,19 @@ const isPublishable = computed(() =>
   ),
 )
 const photoUrls = computed(() => photos.value.filter(Boolean))
-const branches = computed(() =>
-  branchesText.value
-    .split(/\n+/)
-    .map((branch) => branch.trim())
-    .filter(Boolean),
-)
-
 function pickFiles() {
   fileInput.value?.click()
+}
+
+function addBranch() {
+  const branch = newBranch.value.trim()
+  if (!branch || branches.value.some((item) => item.toLocaleLowerCase() === branch.toLocaleLowerCase())) return
+  branches.value.push(branch)
+  newBranch.value = ''
+}
+
+function removeBranch(index) {
+  branches.value.splice(index, 1)
 }
 
 function requiredRule(value) {

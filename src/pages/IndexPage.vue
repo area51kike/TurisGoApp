@@ -14,6 +14,11 @@
       </button>
       <div class="topbar-actions">
         <button
+          class="topbar-language"
+          :aria-label="isEnglish ? 'Cambiar idioma a español' : 'Switch language to English'"
+          @click="toggleLanguage"
+        >{{ isEnglish ? 'ES' : 'EN' }}</button>
+        <button
           class="topbar-account"
           :aria-label="isEnglish ? 'Open account' : 'Abrir cuenta'"
           @click="navigateTo('account')"
@@ -77,12 +82,13 @@
         :is-authenticated="isAuthenticated"
         :user-profile="userProfile"
         :show-photo-step="showProfilePhotoStep"
+        :has-business-profile="Boolean(businessProfile.name)"
         @login="login"
         @register="register"
         @logout="logout"
         @switch-account="switchAccount"
-        @toggle-language="toggleLanguage"
         @open-settings="openSettings"
+        @open-business="openBusinessProfile"
         @update-profile="updateAccountDetails"
         @complete-photo="completeProfilePhoto"
         @skip-photo="skipProfilePhoto"
@@ -185,8 +191,8 @@
         <p class="settings-dialog__intro">
           {{
             isEnglish
-              ? 'Choose colors and a typeface. Changes apply when you save.'
-              : 'Elige colores y una tipografía. Los cambios se aplican al guardar.'
+              ? 'Choose a theme or typeface to apply it. New typefaces apply when saved.'
+              : 'Elige un tema o una tipografía para aplicarlos. Las fuentes nuevas se aplican al guardarlas.'
           }}
         </p>
 
@@ -225,7 +231,7 @@
           >
             <button
               :class="['font-choice', { selected: settingsDraft.font === font.value }]"
-              @click="settingsDraft.font = font.value"
+              @click="selectFont(font.value)"
             >
               <span :style="{ fontFamily: font.value }">{{ font.sample }}</span>
               <strong>{{ isEnglish ? font.en : font.es }}</strong>
@@ -240,10 +246,6 @@
             />
           </div>
           <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'" @click="openCustomFontEditor" />
-          <div class="settings-dialog__actions">
-            <q-btn flat rounded :label="isEnglish ? 'Cancel font' : 'Cancelar fuente'" @click="settingsDraft = { ...settingsDraft, font: preferences.font }" />
-            <q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save font' : 'Guardar fuente'" @click="saveFontSettings" />
-          </div>
         </div>
 
       </q-card>
@@ -416,6 +418,12 @@ const STORAGE_KEYS = {
   premium: 'turisgo.premium-preview',
   replies: 'turisgo.business-replies',
 }
+const removedCatalogFontNames = new Set([
+  'roboto', 'open sans', 'nunito', 'oswald', 'merriweather', 'playfair display', 'source sans 3',
+  'roboto slab', 'ubuntu', 'rubik', 'inter', 'work sans', 'nunito sans', 'dm sans', 'pt sans',
+  'pt serif', 'libre baskerville', 'caveat', 'dancing script', 'lobster', 'quicksand', 'comfortaa',
+  'karla',
+])
 
 function readStorage(key, fallback) {
   if (typeof window === 'undefined') return fallback
@@ -444,7 +452,9 @@ const preferences = ref(
 )
 const preferencesDefaults = { ...preferences.value }
 const customThemes = ref(readStorage(STORAGE_KEYS.themes, []))
-const customFonts = ref(readStorage(STORAGE_KEYS.fonts, []))
+const storedCustomFonts = readStorage(STORAGE_KEYS.fonts, [])
+const customFonts = ref(storedCustomFonts.filter((font) => !removedCatalogFontNames.has(font.name?.toLowerCase())))
+if (customFonts.value.length !== storedCustomFonts.length) writeStorage(STORAGE_KEYS.fonts, customFonts.value)
 const userProfile = ref(
   readStorage(STORAGE_KEYS.profile, {
     name: '',
@@ -582,16 +592,20 @@ const builtInFontOptions = [
   { value: 'Arial, Helvetica, sans-serif', es: 'Arial', en: 'Arial', sample: 'Aa' },
 ]
 const fontCatalog = [
-  'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'Nunito', 'Raleway', 'Oswald',
-  'Merriweather', 'Playfair Display', 'Source Sans 3', 'Roboto Slab', 'Ubuntu', 'Rubik',
-  'Inter', 'Work Sans', 'Nunito Sans', 'DM Sans', 'PT Sans', 'PT Serif', 'Libre Baskerville',
-  'Caveat', 'Dancing Script', 'Lobster', 'Quicksand', 'Comfortaa', 'Karla', 'Bebas Neue',
-].map((name) => ({
-  id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-  name,
-  googleName: name,
-  family: `"${name}", sans-serif`,
-}))
+  { id: 'montserrat-alternates', name: 'Montserrat Alternates', family: '"Montserrat Alternates", sans-serif' },
+  { id: 'lato', name: 'Lato', family: '"Lato", sans-serif' },
+  { id: 'raleway', name: 'Raleway', family: '"Raleway", sans-serif' },
+  { id: 'bebas-neue', name: 'Bebas Neue', family: '"Bebas Neue", sans-serif' },
+  { id: 'montserrat', name: 'Montserrat', family: '"Montserrat", sans-serif' },
+  { id: 'poppins', name: 'Poppins', family: '"Poppins", sans-serif' },
+]
+const oldSelectedFont = storedCustomFonts.find((font) =>
+  font.value === preferences.value.font && removedCatalogFontNames.has(font.name?.toLowerCase()),
+)
+if (oldSelectedFont) {
+  preferences.value = { ...preferences.value, font: builtInFontOptions[0].value }
+  writeStorage(STORAGE_KEYS.preferences, preferences.value)
+}
 
 const allThemeOptions = computed(() => [...themeOptions, ...customThemes.value])
 const fontOptions = computed(() => [...builtInFontOptions, ...customFonts.value])
@@ -736,8 +750,6 @@ watch(selectedPlace, (place) => {
 })
 
 onMounted(async () => {
-  const selectedCatalogFont = fontCatalog.find((font) => font.family === preferences.value.font)
-  if (selectedCatalogFont) ensureCatalogFontLoaded(selectedCatalogFont)
   stopAuthWatch = watchAuthentication(async (user) => {
     stopPeopleWatch?.()
     stopPeopleWatch = undefined
@@ -933,10 +945,10 @@ function selectTheme(theme) {
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
 }
 
-function saveFontSettings() {
-  preferences.value = { ...preferences.value, font: settingsDraft.value.font }
+function selectFont(font) {
+  settingsDraft.value = { ...settingsDraft.value, font }
+  preferences.value = { ...preferences.value, font }
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
-  $q.notify({ type: 'positive', message: isEnglish.value ? 'Typeface saved.' : 'Tipografía guardada.' })
 }
 
 function cancelCustomTheme() {
@@ -992,18 +1004,6 @@ function selectCatalogFont(fontId) {
   const font = fontCatalog.find((item) => item.id === fontId)
   if (!font) return
   customFontDraft.value = { catalogId: font.id, name: font.name, family: font.family }
-  ensureCatalogFontLoaded(font)
-}
-
-function ensureCatalogFontLoaded(font) {
-  const linkId = `turisgo-google-font-${font.id}`
-  if (!document.getElementById(linkId)) {
-    const link = document.createElement('link')
-    link.id = linkId
-    link.rel = 'stylesheet'
-    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font.googleName).replace(/%20/g, '+')}:wght@400;500;700&display=swap`
-    document.head.appendChild(link)
-  }
 }
 
 function saveCustomFont() {
@@ -1303,7 +1303,7 @@ async function submitReview(review) {
 
 function activatePremiumPreview() {
   if (!isAuthenticated.value || userProfile.value.mode !== 'business') {
-    navigateTo(isAuthenticated.value ? 'profile' : 'account')
+    navigateTo('account')
     $q.notify({ type: 'info', message: isEnglish.value ? 'Sign in with a business account to open these tools.' : 'Inicia sesión con una cuenta empresarial para usar estas herramientas.' })
     return
   }
@@ -1317,6 +1317,33 @@ function activatePremiumPreview() {
       ? 'Premium preview enabled. No payment was made.'
       : 'Vista previa Premium activada. No se realizó ningún cobro.',
   })
+}
+
+async function openBusinessProfile() {
+  if (!isAuthenticated.value) {
+    navigateTo('account')
+    return
+  }
+  if (userProfile.value.mode !== 'business') {
+    accountLoading.value = true
+    accountError.value = ''
+    try {
+      const updatedProfile = await updateAccountProfile({
+        ...userProfile.value,
+        mode: 'business',
+        businessName: userProfile.value.businessName || '',
+      })
+      userProfile.value = { ...userProfile.value, ...updatedProfile, mode: 'business' }
+      writeStorage(STORAGE_KEYS.profile, userProfile.value)
+    } catch (error) {
+      accountError.value = accountErrorText(error)
+      $q.notify({ type: 'negative', message: accountError.value })
+      return
+    } finally {
+      accountLoading.value = false
+    }
+  }
+  navigateTo('business')
 }
 
 async function saveBusinessProfile(profile) {

@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
+@font-face { font-family: 'Montserrat Alternates'; src: url('../assets/fonts/MontserratAlternates-Regular.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato-Regular.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Raleway'; src: url('../assets/fonts/Raleway-Regular.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Bebas Neue'; src: url('../assets/fonts/BebasNeue-Regular.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Montserrat'; src: url('../assets/fonts/Montserrat-Regular.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Poppins'; src: url('../assets/fonts/Poppins-Regular.ttf') format('truetype'); font-style: normal; font-weight: 400; font-display: swap; }
+
 :root {
   color-scheme: dark;
   /* Paleta TurisGo (tema por defecto) */
@@ -161,6 +168,18 @@ button {
 }
 .topbar-actions {
   gap: 6px;
+}
+.topbar-language {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
 }
 .topbar-account {
   min-width: 92px;
@@ -1884,6 +1903,7 @@ button {
   gap: 12px;
   flex-wrap: wrap;
 }
+.account-business-link { width: 100%; min-height: 46px; }
 .account-card__identity { display: grid; flex: 1; min-width: 130px; gap: 3px; }
 .account-card__identity strong,
 .account-card__identity span,
@@ -1903,6 +1923,15 @@ button {
 .account-form .q-select__dropdown-icon { color: #fff !important; }
 .account-form .q-field__hint,
 .account-form .q-field__bottom { color: rgba(255,255,255,.78) !important; }
+.branch-manager { display: grid; gap: 9px; }
+.branch-manager__add { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; }
+.branch-manager__add .q-btn { min-height: 48px; }
+.branch-manager__list { display: flex; flex-wrap: wrap; gap: 4px; }
+.branch-manager__list .q-chip { max-width: 100%; }
+@media (max-width: 420px) {
+  .branch-manager__add { grid-template-columns: 1fr; }
+  .branch-manager__add .q-btn { justify-self: stretch; }
+}
 .account-form input::placeholder { color: rgba(255,255,255,.65); }
 .account-form > .q-btn { min-height: 46px; }
 .account-tabs { display: flex; padding: 4px; border-radius: 14px; background: var(--app-bg); }
@@ -1939,6 +1968,13 @@ button {
   .topbar-account__label small { max-width: 82px; font-size: 7px; }
   .bottom-navigation__item { gap: 2px; font-size: 8px; }
   .bottom-navigation__item .q-icon { font-size: 20px; }
+}
+@media (max-width: 360px) {
+  .app-topbar { gap: 6px; padding-right: 10px; padding-left: 10px; }
+  .brand-lockup { gap: 6px; }
+  .topbar-account { max-width: 112px; }
+  .topbar-account__label small { display: none; }
+  .topbar-account__label strong { max-width: 62px; }
 }
 
 .tutorial-overlay {
