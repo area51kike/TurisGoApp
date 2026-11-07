@@ -1,44 +1,7 @@
 import { collection, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
-import { getDownloadURL, ref as storageRef, uploadBytesResumable } from 'firebase/storage'
-import { auth, db, storage } from '../boot/firebase'
+import { auth, db } from '../boot/firebase'
 
-const PHOTO_UPLOAD_TIMEOUT_MS = 45000
 const FIRESTORE_SAVE_TIMEOUT_MS = 20000
-
-function dataUrlToBlob(dataUrl) {
-  const [header, content] = dataUrl.split(',')
-  if (!header || !content) throw new Error('invalid-photo-data')
-  const mimeType = header.match(/^data:(.*?);base64$/)?.[1] || 'image/jpeg'
-  const binary = atob(content)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return new Blob([bytes], { type: mimeType })
-}
-
-function uploadPhoto(target, photo) {
-  const task = uploadBytesResumable(target, dataUrlToBlob(photo), { contentType: 'image/jpeg' })
-  return new Promise((resolve, reject) => {
-    let timeoutId
-    let timedOut = false
-    let unsubscribe = () => {}
-    const finish = (callback, value) => {
-      clearTimeout(timeoutId)
-      unsubscribe()
-      callback(value)
-    }
-    unsubscribe = task.on(
-      'state_changed',
-      undefined,
-      (error) => finish(reject, timedOut ? new Error('business-photo-upload-timeout') : error),
-      () => finish(resolve, task.snapshot),
-    )
-    timeoutId = setTimeout(() => {
-      timedOut = true
-      task.cancel()
-      finish(reject, new Error('business-photo-upload-timeout'))
-    }, PHOTO_UPLOAD_TIMEOUT_MS)
-  })
-}
 
 function withTimeout(promise, timeoutMs, errorCode) {
   let timeoutId
@@ -48,19 +11,15 @@ function withTimeout(promise, timeoutMs, errorCode) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId))
 }
 
-/** Store public business listing fields and image URLs in Firestore. */
+/** Store the public listing and its compressed photo data URLs in Firestore. */
 export async function saveBusinessListing(profile) {
   const { id, ...fields } = profile
   const uid = auth.currentUser?.uid
   if (!uid) throw new Error('auth-required')
-  const photoUrls = await Promise.all((fields.photoUrls || []).map(async (photo, index) => {
-    if (!photo.startsWith('data:')) return photo
-    const path = `businessListings/${uid}/${id}-${index}-${Date.now()}.jpg`
-    const target = storageRef(storage, path)
-    await uploadPhoto(target, photo)
-    return withTimeout(getDownloadURL(target), 15000, 'business-photo-url-timeout')
-  }))
-  const saved = { ...fields, photoUrls, ownerUid: uid }
+  const saved = { ...fields, photoUrls: fields.photoUrls || [], ownerUid: uid }
+  if (new Blob([JSON.stringify(saved)]).size > 900000) {
+    throw new Error('business-profile-too-large')
+  }
   await withTimeout(setDoc(
     doc(db, 'businessProfiles', id),
     { ...saved, updatedAt: serverTimestamp() },

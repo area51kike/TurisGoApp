@@ -16,7 +16,7 @@ Prototipo móvil para descubrir destinos y hoteles de El Salvador, guardar lugar
 - Vista previa de TURISGO Premium para revisar el flujo empresarial sin realizar un cobro.
 - Navegación adaptable a teléfonos, áreas seguras de iOS y metadatos para abrir TURISGO desde la pantalla de inicio.
 
-Favoritos, presupuesto y preferencias usan almacenamiento local. Cuentas, nombres de usuario únicos, chat, reseñas, respuestas empresariales y fichas públicas se conectan a Firebase. Las imágenes se suben a Firebase Storage y Firestore conserva sus URLs.
+Favoritos, presupuesto y preferencias usan almacenamiento local. Cuentas, nombres de usuario únicos, chat, reseñas, respuestas empresariales y fichas públicas se conectan a Firebase. Las fotos empresariales se comprimen en el dispositivo y se guardan como datos de imagen en Firestore para que el flujo de publicación no dependa de Firebase Storage.
 
 ## Activar cuentas y chat en Firebase
 

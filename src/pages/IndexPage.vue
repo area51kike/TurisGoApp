@@ -1435,20 +1435,10 @@ async function saveBusinessProfile(profile) {
 }
 
 function businessSaveErrorMessage(code, english) {
-  if (code === 'storage/unauthorized') {
+  if (code === 'business-profile-too-large') {
     return english
-      ? 'The photo was not uploaded. Check Firebase Storage rules for this account.'
-      : 'No se pudo subir la foto. Revisa las reglas de Firebase Storage para esta cuenta.'
-  }
-  if (code === 'business-photo-upload-timeout' || code === 'business-photo-url-timeout' || code === 'storage/retry-limit-exceeded' || code === 'storage/network-request-failed') {
-    return english
-      ? 'The photo upload timed out. Check the connection and try again.'
-      : 'La subida de la foto tardó demasiado. Revisa la conexión e inténtalo de nuevo.'
-  }
-  if (code === 'storage/bucket-not-found' || code === 'storage/unknown') {
-    return english
-      ? 'Firebase Storage could not save the photo. Check the Storage bucket configuration.'
-      : 'Firebase Storage no pudo guardar la foto. Revisa la configuración del bucket de Storage.'
+      ? 'This listing is too large for Firestore. Remove a photo and try again.'
+      : 'La ficha supera el límite de Firestore. Quita una foto e inténtalo de nuevo.'
   }
   if (code === 'permission-denied') {
     return english
