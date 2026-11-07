@@ -1324,10 +1324,12 @@ function normalizeCoordinates(value) {
 
 async function submitReview(review) {
   if (!isAuthenticated.value) {
+    review.onComplete?.(false)
     navigateTo('account')
     return
   }
   if (!selectedPlace.value || !visitProofs.value[selectedPlace.value.id]) {
+    review.onComplete?.(false)
     $q.notify({
       type: 'negative',
       message: isEnglish.value
@@ -1351,9 +1353,17 @@ async function submitReview(review) {
   try {
     await savePlaceReview(selectedPlace.value.id, entry)
   } catch (error) {
-    $q.notify({ type: 'negative', message: accountErrorText(error) })
+    review.onComplete?.(false)
+    const code = error?.code || error?.message
+    const message = ['permission-denied', 'firestore/permission-denied'].includes(code)
+      ? (isEnglish.value
+        ? 'Firebase denied saving this review. Check the Firestore rules for placeReviews.'
+        : 'Firebase rechazó guardar la reseña. Revisa las reglas de Firestore para placeReviews.')
+      : accountErrorText(error)
+    $q.notify({ type: 'negative', message })
     return
   }
+  review.onComplete?.(true)
   $q.notify({
     type: 'positive',
     message: isEnglish.value ? 'Review published.' : 'Reseña publicada.',

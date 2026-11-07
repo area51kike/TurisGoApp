@@ -2294,6 +2294,21 @@ button {
 .q-dialog__backdrop {
   background: rgba(1, 16, 28, 0.75);
 }
+.q-dialog-plugin {
+  border: 1px solid rgba(0, 145, 224, 0.45);
+  border-radius: 18px !important;
+  background: #08243a !important;
+  color: #f4f9fd !important;
+}
+.q-dialog-plugin .q-card__section,
+.q-dialog-plugin .q-card__section--vert,
+.q-dialog-plugin .q-dialog__title,
+.q-dialog-plugin .q-dialog__message {
+  color: #f4f9fd !important;
+}
+.q-dialog-plugin .q-dialog__message {
+  line-height: 1.55;
+}
 .q-btn:focus-visible,
 button:focus-visible,
 a:focus-visible {

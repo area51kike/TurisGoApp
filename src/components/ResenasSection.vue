@@ -20,7 +20,7 @@
       <label class="review-label">{{ isEnglish ? 'Your rating' : 'Tu puntuación' }}</label>
       <q-rating v-model="score" size="30px" color="amber-8" icon="star_border" icon-selected="star" />
       <q-input v-model="text" outlined rounded autogrow :placeholder="isEnglish ? 'Share a helpful tip or experience…' : 'Comparte un consejo o tu experiencia…'" />
-      <q-btn unelevated rounded color="primary" icon="send" type="submit" :label="isEnglish ? 'Publish review' : 'Publicar reseña'" :disable="!score || !text.trim()" />
+      <q-btn unelevated rounded color="primary" icon="send" type="button" :loading="submitting" :label="isEnglish ? 'Publish review' : 'Publicar reseña'" :disable="!score || !text.trim() || submitting" @click="submitReview" />
     </form>
 
     <div v-if="reviews.length" class="review-list">
@@ -48,11 +48,21 @@ const props = defineProps({
 const emit = defineEmits(['verify-visit', 'submit-review', 'request-account'])
 const score = ref(0)
 const text = ref('')
+const submitting = ref(false)
 
 function submitReview() {
-  if (!props.visited || !score.value || !text.value.trim()) return
-  emit('submit-review', { rating: score.value, text: text.value.trim() })
-  score.value = 0
-  text.value = ''
+  if (!props.visited || !props.isAuthenticated || !score.value || !text.value.trim() || submitting.value) return
+  submitting.value = true
+  emit('submit-review', {
+    rating: score.value,
+    text: text.value.trim(),
+    onComplete: (saved) => {
+      submitting.value = false
+      if (saved) {
+        score.value = 0
+        text.value = ''
+      }
+    },
+  })
 }
 </script>
