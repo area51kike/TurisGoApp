@@ -1,6 +1,52 @@
 import { collection, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
-import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage'
+import { getDownloadURL, ref as storageRef, uploadBytesResumable } from 'firebase/storage'
 import { auth, db, storage } from '../boot/firebase'
+
+const PHOTO_UPLOAD_TIMEOUT_MS = 45000
+const FIRESTORE_SAVE_TIMEOUT_MS = 20000
+
+function dataUrlToBlob(dataUrl) {
+  const [header, content] = dataUrl.split(',')
+  if (!header || !content) throw new Error('invalid-photo-data')
+  const mimeType = header.match(/^data:(.*?);base64$/)?.[1] || 'image/jpeg'
+  const binary = atob(content)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return new Blob([bytes], { type: mimeType })
+}
+
+function uploadPhoto(target, photo) {
+  const task = uploadBytesResumable(target, dataUrlToBlob(photo), { contentType: 'image/jpeg' })
+  return new Promise((resolve, reject) => {
+    let timeoutId
+    let timedOut = false
+    let unsubscribe = () => {}
+    const finish = (callback, value) => {
+      clearTimeout(timeoutId)
+      unsubscribe()
+      callback(value)
+    }
+    unsubscribe = task.on(
+      'state_changed',
+      undefined,
+      (error) => finish(reject, timedOut ? new Error('business-photo-upload-timeout') : error),
+      () => finish(resolve, task.snapshot),
+    )
+    timeoutId = setTimeout(() => {
+      timedOut = true
+      task.cancel()
+      finish(reject, new Error('business-photo-upload-timeout'))
+    }, PHOTO_UPLOAD_TIMEOUT_MS)
+  })
+}
+
+function withTimeout(promise, timeoutMs, errorCode) {
+  let timeoutId
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(errorCode)), timeoutMs)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId))
+}
 
 /** Store public business listing fields and image URLs in Firestore. */
 export async function saveBusinessListing(profile) {
@@ -11,15 +57,15 @@ export async function saveBusinessListing(profile) {
     if (!photo.startsWith('data:')) return photo
     const path = `businessListings/${uid}/${id}-${index}-${Date.now()}.jpg`
     const target = storageRef(storage, path)
-    await uploadString(target, photo, 'data_url', { contentType: 'image/jpeg' })
-    return getDownloadURL(target)
+    await uploadPhoto(target, photo)
+    return withTimeout(getDownloadURL(target), 15000, 'business-photo-url-timeout')
   }))
   const saved = { ...fields, photoUrls, ownerUid: uid }
-  await setDoc(
+  await withTimeout(setDoc(
     doc(db, 'businessProfiles', id),
     { ...saved, updatedAt: serverTimestamp() },
     { merge: true },
-  )
+  ), FIRESTORE_SAVE_TIMEOUT_MS, 'business-firestore-save-timeout')
   return saved
 }
 

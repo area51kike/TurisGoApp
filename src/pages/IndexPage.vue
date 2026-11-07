@@ -1422,16 +1422,47 @@ async function saveBusinessProfile(profile) {
       message: isEnglish.value ? 'Listing saved to Firestore.' : 'Ficha guardada en Firestore.',
     })
   } catch (error) {
-    console.error('Firestore business profile save failed:', error)
+    console.error('Business listing save failed:', error)
+    const errorCode = error?.code || error?.message
+    const errorMessage = businessSaveErrorMessage(errorCode, isEnglish.value)
     $q.notify({
-      type: 'warning',
-      message: isEnglish.value
-        ? 'Saved on this device. Firestore rejected the write; check project rules and authentication.'
-        : 'Guardado en este dispositivo. Firestore rechazó la escritura; revisa las reglas y la autenticación del proyecto.',
+      type: 'negative',
+      message: errorMessage,
     })
   } finally {
     savingBusiness.value = false
   }
+}
+
+function businessSaveErrorMessage(code, english) {
+  if (code === 'storage/unauthorized') {
+    return english
+      ? 'The photo was not uploaded. Check Firebase Storage rules for this account.'
+      : 'No se pudo subir la foto. Revisa las reglas de Firebase Storage para esta cuenta.'
+  }
+  if (code === 'business-photo-upload-timeout' || code === 'business-photo-url-timeout' || code === 'storage/retry-limit-exceeded' || code === 'storage/network-request-failed') {
+    return english
+      ? 'The photo upload timed out. Check the connection and try again.'
+      : 'La subida de la foto tardó demasiado. Revisa la conexión e inténtalo de nuevo.'
+  }
+  if (code === 'storage/bucket-not-found' || code === 'storage/unknown') {
+    return english
+      ? 'Firebase Storage could not save the photo. Check the Storage bucket configuration.'
+      : 'Firebase Storage no pudo guardar la foto. Revisa la configuración del bucket de Storage.'
+  }
+  if (code === 'permission-denied') {
+    return english
+      ? 'The listing could not be saved to Firestore. Check the database rules for this account.'
+      : 'No se pudo guardar la ficha en Firestore. Revisa las reglas de la base de datos para esta cuenta.'
+  }
+  if (code === 'business-firestore-save-timeout') {
+    return english
+      ? 'Firestore did not confirm the save in time. Check the connection and try again.'
+      : 'Firestore no confirmó el guardado a tiempo. Revisa la conexión e inténtalo de nuevo.'
+  }
+  return english
+    ? 'Could not publish the listing. Check the connection and Firebase permissions, then try again.'
+    : 'No se pudo publicar la ficha. Revisa la conexión y los permisos de Firebase e inténtalo de nuevo.'
 }
 
 function startBusinessReplyWatch() {
