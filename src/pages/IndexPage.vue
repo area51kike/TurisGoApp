@@ -274,6 +274,8 @@
           option-value="id"
           emit-value
           map-options
+          popup-content-class="font-catalog-popup"
+          :popup-content-style="fontCatalogPopupStyle"
           :label="isEnglish ? 'Search and choose a typeface' : 'Busca y elige una tipografía'"
           :hint="isEnglish ? 'Type to filter the catalog' : 'Escribe para filtrar el catálogo'"
           @update:model-value="selectCatalogFont"

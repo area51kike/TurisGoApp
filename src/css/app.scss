@@ -1992,6 +1992,24 @@ button {
 .commission-note .q-icon { color: var(--gold); }
 .q-menu { background: var(--surface) !important; color: var(--text-primary) !important; }
 .q-menu .q-item { color: var(--text-primary); }
+.font-catalog-popup {
+  border: 1px solid var(--line, rgba(0, 145, 224, 0.35));
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+  overscroll-behavior: contain;
+}
+.font-catalog-popup .q-item {
+  min-height: 62px;
+  padding: 9px 14px;
+  color: inherit !important;
+  background: transparent;
+}
+.font-catalog-popup .q-item--active,
+.font-catalog-popup .q-item:hover {
+  background: rgba(0, 145, 224, 0.2);
+}
+.font-catalog-popup .q-item__label { color: inherit; }
+.font-catalog-popup .q-item__label--caption { opacity: 0.72; }
 @media (max-width: 390px) {
   .topbar-account { max-width: 136px; gap: 6px; padding-right: 7px; }
   .topbar-account__photo { flex-basis: 30px; width: 30px; height: 30px; }
