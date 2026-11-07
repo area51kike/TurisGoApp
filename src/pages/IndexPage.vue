@@ -1303,8 +1303,8 @@ async function locateAndVerifyVisit(place, placeCoordinates) {
     const message =
       error.code === 1
         ? isEnglish.value
-          ? 'Location permission is blocked. Open this site’s browser settings, allow Location, and try again.'
-          : 'El permiso de ubicación está bloqueado. Abre los permisos de este sitio en el navegador, habilita Ubicación e inténtalo de nuevo.'
+          ? 'Location is blocked for this site. In your browser, open the site information beside the address, choose Permissions > Location > Allow, then reload TURISGO and retry.'
+          : 'La ubicación está bloqueada para este sitio. En el navegador, abre la información del sitio junto a la dirección, elige Permisos > Ubicación > Permitir, recarga TURISGO e inténtalo de nuevo.'
         : isEnglish.value
           ? 'Could not read your location. Try again outdoors.'
           : 'No pudimos obtener tu ubicación. Inténtalo de nuevo al aire libre.'

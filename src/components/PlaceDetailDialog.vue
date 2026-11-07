@@ -31,8 +31,8 @@
           v-model="slide"
           swipeable
           animated
-          navigation
-          arrows
+          :navigation="photos.length > 1"
+          :arrows="photos.length > 1"
           control-color="white"
           class="detail-gallery"
         >
