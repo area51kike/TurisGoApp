@@ -177,9 +177,10 @@
       <q-card class="settings-dialog" :style="appAppearanceStyle">
         <div class="settings-dialog__top">
           <div>
-            <span class="eyebrow">{{ isEnglish ? 'MAKE IT YOURS' : 'A TU MANERA' }}</span>
-            <h2>{{ isEnglish ? 'Appearance' : 'Personalización' }}</h2>
+            <span class="eyebrow">{{ customFontEditorOpen ? (isEnglish ? 'CUSTOM TYPEFACE' : 'TIPOGRAFÍA PERSONALIZADA') : (isEnglish ? 'MAKE IT YOURS' : 'A TU MANERA') }}</span>
+            <h2>{{ customFontEditorOpen ? (isEnglish ? 'Add a typeface' : 'Agregar tipografía') : (isEnglish ? 'Appearance' : 'Personalización') }}</h2>
           </div>
+          <q-btn v-if="customFontEditorOpen" flat round icon="arrow_back" :aria-label="isEnglish ? 'Back' : 'Volver'" @click="cancelCustomFont" />
           <q-btn
             flat
             round
@@ -188,7 +189,7 @@
             @click="settingsOpen = false"
           />
         </div>
-        <p class="settings-dialog__intro">
+        <p v-if="!customFontEditorOpen" class="settings-dialog__intro">
           {{
             isEnglish
               ? 'Choose a theme or typeface to apply it. New typefaces apply when saved.'
@@ -196,7 +197,7 @@
           }}
         </p>
 
-        <div class="settings-choice-group">
+        <div v-if="!customFontEditorOpen" class="settings-choice-group">
           <div class="settings-label">{{ isEnglish ? 'COLOR THEME' : 'TEMA DE COLOR' }}</div>
           <div
           v-for="theme in allThemeOptions"
@@ -222,6 +223,7 @@
           <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a three-color palette' : 'Agregar paleta de tres colores'" @click="openCustomThemeEditor" />
         </div>
 
+        <template v-if="!customFontEditorOpen">
         <div v-for="role in fontRoles" :key="role.key" class="settings-choice-group">
           <div class="settings-label">{{ isEnglish ? role.en : role.es }}</div>
           <div v-for="font in fontOptions" :key="`${role.key}-${font.value}`" class="appearance-choice-row">
@@ -240,6 +242,37 @@
           </div>
           <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'" @click="openCustomFontEditor(role.key)" />
         </div>
+        </template>
+
+        <div v-if="customFontEditorOpen" class="settings-editor-inline">
+          <q-input
+            v-model="fontCatalogSearch"
+            outlined
+            rounded
+            clearable
+            :label="isEnglish ? 'Search typefaces' : 'Buscar tipografías'"
+            :hint="isEnglish ? 'Choose by name and preview' : 'Elige por nombre y mira la muestra'"
+          />
+          <div class="font-catalog-list" role="listbox" :aria-label="isEnglish ? 'Available typefaces' : 'Tipografías disponibles'">
+            <button
+              v-for="font in filteredFontCatalog"
+              :key="font.id"
+              type="button"
+              role="option"
+              :aria-selected="customFontDraft.catalogId === font.id"
+              :class="['font-catalog-option', { selected: customFontDraft.catalogId === font.id }]"
+              @click="selectCatalogFont(font.id)"
+            >
+              <strong>{{ font.name }}</strong>
+              <span :style="{ fontFamily: font.family }">Aa Bb Cc Ññ 123</span>
+            </button>
+            <p v-if="!filteredFontCatalog.length" class="font-catalog-empty">
+              {{ isEnglish ? 'No typefaces match your search.' : 'No hay tipografías con ese nombre.' }}
+            </p>
+          </div>
+          <div class="font-live-preview" :style="{ fontFamily: customFontPreviewFamily }"><small>{{ isEnglish ? 'PREVIEW' : 'VISTA PREVIA' }}</small><strong>Aa Bb Cc Ññ 123</strong><span>{{ isEnglish ? 'A quick look at this typeface.' : 'Así se vería esta tipografía.' }}</span></div>
+          <div class="settings-dialog__actions"><q-btn flat rounded :label="isEnglish ? 'Cancel' : 'Cancelar'" @click="cancelCustomFont" /><q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save typeface' : 'Guardar fuente'" @click="saveCustomFont" /></div>
+        </div>
 
       </q-card>
     </q-dialog>
@@ -254,42 +287,6 @@
         <label v-for="field in paletteFields" :key="field.key" class="palette-field"><span>{{ isEnglish ? field.en : field.es }}</span><input v-model="newThemeDraft[field.key]" type="color" /></label>
         <div class="palette-preview" :style="{ background: newThemeDraft.background, color: newThemeDraft.highlight, '--preview-accent': newThemeDraft.accent }"><strong>{{ isEnglish ? 'Palette preview' : 'Vista previa de la paleta' }}</strong><span>{{ isEnglish ? 'Primary color' : 'Color principal' }}</span><i /></div>
         <div class="settings-dialog__actions"><q-btn flat rounded :label="isEnglish ? 'Cancel' : 'Cancelar'" @click="cancelCustomTheme" /><q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save palette' : 'Guardar paleta'" @click="saveCustomTheme" /></div>
-      </q-card>
-    </q-dialog>
-
-    <q-dialog v-model="customFontEditorOpen" persistent>
-      <q-card class="settings-dialog settings-editor-dialog" :style="appAppearanceStyle">
-        <div class="settings-dialog__top">
-          <div><span class="eyebrow">{{ isEnglish ? 'CUSTOM TYPEFACE' : 'TIPOGRAFÍA PERSONALIZADA' }}</span><h2>{{ isEnglish ? 'Add a typeface' : 'Agregar tipografía' }}</h2></div>
-          <q-btn flat round icon="close" :aria-label="isEnglish ? 'Close' : 'Cerrar'" @click="cancelCustomFont" />
-        </div>
-        <q-input
-          v-model="fontCatalogSearch"
-          outlined
-          rounded
-          clearable
-          :label="isEnglish ? 'Search typefaces' : 'Buscar tipografías'"
-          :hint="isEnglish ? 'Choose by name and preview' : 'Elige por nombre y mira la muestra'"
-        />
-        <div class="font-catalog-list" role="listbox" :aria-label="isEnglish ? 'Available typefaces' : 'Tipografías disponibles'">
-          <button
-            v-for="font in filteredFontCatalog"
-            :key="font.id"
-            type="button"
-            role="option"
-            :aria-selected="customFontDraft.catalogId === font.id"
-            :class="['font-catalog-option', { selected: customFontDraft.catalogId === font.id }]"
-            @click="selectCatalogFont(font.id)"
-          >
-            <strong>{{ font.name }}</strong>
-            <span :style="{ fontFamily: font.family }">Aa Bb Cc Ññ 123</span>
-          </button>
-          <p v-if="!filteredFontCatalog.length" class="font-catalog-empty">
-            {{ isEnglish ? 'No typefaces match your search.' : 'No hay tipografías con ese nombre.' }}
-          </p>
-        </div>
-        <div class="font-live-preview" :style="{ fontFamily: customFontPreviewFamily }"><small>{{ isEnglish ? 'PREVIEW' : 'VISTA PREVIA' }}</small><strong>Aa Bb Cc Ññ 123</strong><span>{{ isEnglish ? 'A quick look at this typeface.' : 'Así se vería esta tipografía.' }}</span></div>
-        <div class="settings-dialog__actions"><q-btn flat rounded :label="isEnglish ? 'Cancel' : 'Cancelar'" @click="cancelCustomFont" /><q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save typeface' : 'Guardar fuente'" @click="saveCustomFont" /></div>
       </q-card>
     </q-dialog>
 
