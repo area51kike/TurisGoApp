@@ -20,7 +20,7 @@
       <label class="review-label">{{ isEnglish ? 'Your rating' : 'Tu puntuación' }}</label>
       <q-rating v-model="score" size="30px" color="amber-8" icon="star_border" icon-selected="star" />
       <q-input v-model="text" outlined rounded autogrow :placeholder="isEnglish ? 'Share a helpful tip or experience…' : 'Comparte un consejo o tu experiencia…'" />
-      <q-btn unelevated rounded color="primary" icon="send" :label="isEnglish ? 'Publish review' : 'Publicar reseña'" :disable="!score || !text.trim()" />
+      <q-btn unelevated rounded color="primary" icon="send" type="submit" :label="isEnglish ? 'Publish review' : 'Publicar reseña'" :disable="!score || !text.trim()" />
     </form>
 
     <div v-if="reviews.length" class="review-list">
