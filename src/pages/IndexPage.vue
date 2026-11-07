@@ -1255,6 +1255,18 @@ async function verifyVisit(place) {
     })
     return
   }
+  $q.dialog({
+    title: isEnglish.value ? 'Allow location to verify your visit' : 'Permitir ubicación para validar la visita',
+    message: isEnglish.value
+      ? 'TURISGO will ask your browser for your location once to check that you are near this place. Your location is not added to your review.'
+      : 'TURISGO pedirá permiso al navegador para comprobar una sola vez que estás cerca de este lugar. Tu ubicación no se agrega a la reseña.',
+    cancel: { label: isEnglish.value ? 'Not now' : 'Ahora no', flat: true },
+    ok: { label: isEnglish.value ? 'Continue' : 'Continuar', color: 'primary' },
+    persistent: true,
+  }).onOk(() => locateAndVerifyVisit(place, placeCoordinates))
+}
+
+async function locateAndVerifyVisit(place, placeCoordinates) {
   checkingVisit.value = true
   try {
     const position = await getBestLocationFix()
@@ -1291,8 +1303,8 @@ async function verifyVisit(place) {
     const message =
       error.code === 1
         ? isEnglish.value
-          ? 'Allow location access to verify your visit.'
-          : 'Permite el acceso a la ubicación para verificar tu visita.'
+          ? 'Location permission is blocked. Open this site’s browser settings, allow Location, and try again.'
+          : 'El permiso de ubicación está bloqueado. Abre los permisos de este sitio en el navegador, habilita Ubicación e inténtalo de nuevo.'
         : isEnglish.value
           ? 'Could not read your location. Try again outdoors.'
           : 'No pudimos obtener tu ubicación. Inténtalo de nuevo al aire libre.'
