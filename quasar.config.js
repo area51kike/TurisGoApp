@@ -32,8 +32,7 @@ export default defineConfig((ctx) => {
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
       // GitHub Pages serves this repository below /TurisGoApp/.
-      publicPath: ctx.dev || process.env.NETLIFY ? '/' : '/TurisGoApp/',
-
+      publicPath: ctx.dev || process.env.NETLIFY || process.env.RENDER ? '/' : '/TurisGoApp/',
       target: {
         // browser: 'baseline-widely-available',
         // node: 'node22'
