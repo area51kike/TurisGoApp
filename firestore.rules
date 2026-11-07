@@ -8,6 +8,20 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
     }
 
+    // The app's public profile IDs are normalized usernames, while Firebase
+    // Authentication UIDs are stored as a field for ownership and chat lookup.
+    match /userProfiles/{username} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username == username;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username == username;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
     match /users/{uid} {
       allow read: if signedIn();
       allow create: if signedIn()
@@ -39,9 +53,11 @@ service cloud.firestore {
         && request.resource.data.participants == resource.data.participants;
 
       match /messages/{messageId} {
-        allow read: if chatMember(chatId);
+        allow read: if chatMember(chatId)
+          || (signedIn() && resource.data.recipientUid == request.auth.uid);
         allow create: if chatMember(chatId)
           && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.recipientUid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 4000;

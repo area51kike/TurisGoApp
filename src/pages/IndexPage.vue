@@ -14,34 +14,19 @@
       </button>
       <div class="topbar-actions">
         <button
-          class="language-toggle"
-          :aria-label="isEnglish ? 'Cambiar idioma a español' : 'Switch language to English'"
-          @click="toggleLanguage"
+          class="topbar-account"
+          :aria-label="isEnglish ? 'Open account' : 'Abrir cuenta'"
+          @click="navigateTo('account')"
         >
-          {{ isEnglish ? 'ES' : 'EN' }}
-        </button>
-        <button
-          class="topbar-icon"
-          :aria-label="isEnglish ? 'Customize app' : 'Personalizar app'"
-          @click="openSettings"
-        >
-          <q-icon name="tune" />
-        </button>
-        <button class="topbar-account" @click="navigateTo('account')">
-          <q-icon name="person" /><span>{{ isEnglish ? 'Account' : 'Cuenta' }}</span>
-        </button>
-        <button
-          class="topbar-avatar"
-          :aria-label="isEnglish ? 'Open profile' : 'Abrir perfil'"
-          @click="navigateTo('profile')"
-        >
-          <img
-            v-if="userProfile.avatarUrl && !avatarLoadFailed"
-            :src="userProfile.avatarUrl"
-            alt=""
-            @error="avatarLoadFailed = true"
-          />
-          <span v-else>{{ profileInitials }}</span>
+          <span class="topbar-account__photo">
+            <img v-if="isAuthenticated && userProfile.avatarUrl && !avatarLoadFailed" :src="userProfile.avatarUrl" alt="" @error="avatarLoadFailed = true" />
+            <span v-else-if="isAuthenticated">{{ profileInitials }}</span>
+            <q-icon v-else name="person_outline" />
+          </span>
+          <span class="topbar-account__label">
+            <template v-if="isAuthenticated"><strong>{{ userProfile.name || userProfile.username }}</strong><small>@{{ userProfile.username }}</small></template>
+            <strong v-else>{{ isEnglish ? 'Account' : 'Cuenta' }}</strong>
+          </span>
         </button>
       </div>
     </header>
@@ -84,16 +69,6 @@
         @open-search="navigateTo('search')"
       />
 
-      <PerfilSection
-        v-else-if="currentScreen === 'profile'"
-        :is-english="isEnglish"
-        :user-profile="userProfile"
-        :is-authenticated="isAuthenticated"
-        @save-profile="saveProfile"
-        @navigate="navigateTo"
-        @open-settings="openSettings"
-      />
-
       <CuentaSection
         v-else-if="currentScreen === 'account'"
         :is-english="isEnglish"
@@ -101,9 +76,16 @@
         :error-message="accountError"
         :is-authenticated="isAuthenticated"
         :user-profile="userProfile"
+        :show-photo-step="showProfilePhotoStep"
         @login="login"
         @register="register"
         @logout="logout"
+        @switch-account="switchAccount"
+        @toggle-language="toggleLanguage"
+        @open-settings="openSettings"
+        @update-profile="updateAccountDetails"
+        @complete-photo="completeProfilePhoto"
+        @skip-photo="skipProfilePhoto"
       />
 
       <ExplorarSection
@@ -210,38 +192,53 @@
 
         <div class="settings-choice-group">
           <div class="settings-label">{{ isEnglish ? 'COLOR THEME' : 'TEMA DE COLOR' }}</div>
-          <button
+          <div
           v-for="theme in allThemeOptions"
             :key="theme.value"
-            :class="[
-              'theme-choice',
-              { selected: settingsDraft.theme === theme.value },
-            ]"
-            @click="settingsDraft.theme = theme.value"
+            class="appearance-choice-row"
           >
-            <span class="theme-choice__swatches"><i v-for="color in theme.colors" :key="color" :style="{ backgroundColor: color }"></i></span
-            ><span>{{ isEnglish ? theme.en : theme.es }}</span
-            ><q-icon v-if="settingsDraft.theme === theme.value" name="check_circle" />
-          </button>
-          <div class="settings-dialog__actions">
-            <q-btn flat rounded :label="isEnglish ? 'Cancel colors' : 'Cancelar colores'" @click="settingsDraft = { ...settingsDraft, theme: preferences.theme, customColors: preferences.customColors }" />
-            <q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save colors' : 'Guardar colores'" @click="saveThemeSettings" />
+            <button
+              :class="['theme-choice', { selected: settingsDraft.theme === theme.value }]"
+              @click="selectTheme(theme.value)"
+            >
+              <span class="theme-choice__swatches"><i v-for="color in theme.colors" :key="color" :style="{ backgroundColor: color }"></i></span>
+              <span>{{ isEnglish ? theme.en : theme.es }}</span>
+              <q-icon v-if="settingsDraft.theme === theme.value" name="check_circle" />
+            </button>
+            <q-btn
+              v-if="theme.value.startsWith('custom-')"
+              flat round dense icon="delete" class="appearance-choice-delete"
+              :disable="allThemeOptions.length <= 1"
+              :aria-label="isEnglish ? `Delete ${theme.en} palette` : `Eliminar paleta ${theme.es}`"
+              @click="deleteCustomTheme(theme.value)"
+            />
           </div>
           <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a three-color palette' : 'Agregar paleta de tres colores'" @click="openCustomThemeEditor" />
         </div>
 
         <div class="settings-choice-group">
           <div class="settings-label">{{ isEnglish ? 'TYPEFACE' : 'TIPOGRAFÍA' }}</div>
-          <button
+          <div
             v-for="font in fontOptions"
             :key="font.value"
-            :class="['font-choice', { selected: settingsDraft.font === font.value }]"
-            @click="settingsDraft.font = font.value"
+            class="appearance-choice-row"
           >
-            <span :style="{ fontFamily: font.value }">{{ font.sample }}</span
-            ><strong>{{ isEnglish ? font.en : font.es }}</strong
-            ><q-icon v-if="settingsDraft.font === font.value" name="check_circle" />
-          </button>
+            <button
+              :class="['font-choice', { selected: settingsDraft.font === font.value }]"
+              @click="settingsDraft.font = font.value"
+            >
+              <span :style="{ fontFamily: font.value }">{{ font.sample }}</span>
+              <strong>{{ isEnglish ? font.en : font.es }}</strong>
+              <q-icon v-if="settingsDraft.font === font.value" name="check_circle" />
+            </button>
+            <q-btn
+              v-if="font.name"
+              flat round dense icon="delete" class="appearance-choice-delete"
+              :disable="fontOptions.length <= 1"
+              :aria-label="isEnglish ? `Delete ${font.en} typeface` : `Eliminar fuente ${font.es}`"
+              @click="deleteCustomFont(font.value)"
+            />
+          </div>
           <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'" @click="openCustomFontEditor" />
           <div class="settings-dialog__actions">
             <q-btn flat rounded :label="isEnglish ? 'Cancel font' : 'Cancelar fuente'" @click="settingsDraft = { ...settingsDraft, font: preferences.font }" />
@@ -249,21 +246,6 @@
           </div>
         </div>
 
-        <div class="settings-dialog__actions">
-          <q-btn
-            flat
-            rounded
-            :label="isEnglish ? 'Cancel' : 'Cancelar'"
-            @click="settingsOpen = false"
-          /><q-btn
-            unelevated
-            rounded
-            color="primary"
-            icon="save"
-            :label="isEnglish ? 'Save changes' : 'Guardar cambios'"
-            @click="saveSettings"
-          />
-        </div>
       </q-card>
     </q-dialog>
 
@@ -273,7 +255,7 @@
           <div><span class="eyebrow">{{ isEnglish ? 'CUSTOM COLORS' : 'COLORES PERSONALIZADOS' }}</span><h2>{{ isEnglish ? 'Create a palette' : 'Crear paleta' }}</h2></div>
           <q-btn flat round icon="close" :aria-label="isEnglish ? 'Close' : 'Cerrar'" @click="cancelCustomTheme" />
         </div>
-        <q-input v-model="newThemeDraft.name" outlined rounded maxlength="24" :label="isEnglish ? 'Palette name' : 'Nombre de la paleta'" />
+        <q-input v-model="newThemeDraft.name" outlined rounded maxlength="24" :label="isEnglish ? 'Palette name (optional)' : 'Nombre de la paleta (opcional)'" :hint="isEnglish ? 'A name is created automatically if left blank.' : 'Si lo dejas vacío, se asigna un nombre automáticamente.'" />
         <label v-for="field in paletteFields" :key="field.key" class="palette-field"><span>{{ isEnglish ? field.en : field.es }}</span><input v-model="newThemeDraft[field.key]" type="color" /></label>
         <div class="palette-preview" :style="{ background: newThemeDraft.background, color: newThemeDraft.highlight, '--preview-accent': newThemeDraft.accent }"><strong>{{ isEnglish ? 'Palette preview' : 'Vista previa de la paleta' }}</strong><span>{{ isEnglish ? 'Primary color' : 'Color principal' }}</span><i /></div>
         <div class="settings-dialog__actions"><q-btn flat rounded :label="isEnglish ? 'Cancel' : 'Cancelar'" @click="cancelCustomTheme" /><q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save palette' : 'Guardar paleta'" @click="saveCustomTheme" /></div>
@@ -390,7 +372,6 @@ import { places as catalogPlaces } from '../data/places'
 import InicioSection from '../components/InicioSection.vue'
 import BuscarSection from '../components/BuscarSection.vue'
 import GuardadosSection from '../components/GuardadosSection.vue'
-import PerfilSection from '../components/PerfilSection.vue'
 import ExplorarSection from '../components/ExplorarSection.vue'
 import PresupuestoSection from '../components/PresupuestoSection.vue'
 import MensajesSection from '../components/MensajesSection.vue'
@@ -412,6 +393,7 @@ import {
   savePlaceReview,
   updateAccountProfile,
   watchAuthentication,
+  watchIncomingMessages,
   watchBusinessReplies,
   watchPlaceReviews,
   watchTravelers,
@@ -465,10 +447,10 @@ const customThemes = ref(readStorage(STORAGE_KEYS.themes, []))
 const customFonts = ref(readStorage(STORAGE_KEYS.fonts, []))
 const userProfile = ref(
   readStorage(STORAGE_KEYS.profile, {
-    name: 'Viajero TURISGO',
-    username: 'viajero',
+    name: '',
+    username: '',
     avatarUrl: '',
-    mode: 'personal',
+    mode: '',
   }),
 )
 const savedIds = ref(readStorage(STORAGE_KEYS.saved, []))
@@ -529,6 +511,7 @@ const paletteFields = [
 const checkingVisit = ref(false)
 const savingBusiness = ref(false)
 const avatarLoadFailed = ref(false)
+const showProfilePhotoStep = ref(false)
 
 const tutorialSteps = [
   {
@@ -580,7 +563,8 @@ const navigationItems = [
   { key: 'home', icon: 'home', es: 'Inicio', en: 'Home' },
   { key: 'search', icon: 'search', es: 'Buscar', en: 'Search' },
   { key: 'saved', icon: 'favorite', es: 'Guardados', en: 'Saved' },
-  { key: 'profile', icon: 'person', es: 'Perfil', en: 'Profile' },
+  { key: 'messages', icon: 'chat', es: 'Chat', en: 'Chat' },
+  { key: 'account', icon: 'person', es: 'Cuenta', en: 'Account' },
 ]
 const themeOptions = [
   { value: 'turisgo', es: 'TurisGo', en: 'TurisGo', colors: ['#031b2e', '#0091e0', '#fbc056'] },
@@ -726,6 +710,7 @@ const accountLoading = ref(false)
 const accountError = ref('')
 const people = ref([])
 let stopPeopleWatch
+let stopIncomingMessageWatch
 let stopAuthWatch
 let stopReviewWatch
 let stopBusinessReplyWatch
@@ -756,6 +741,8 @@ onMounted(async () => {
   stopAuthWatch = watchAuthentication(async (user) => {
     stopPeopleWatch?.()
     stopPeopleWatch = undefined
+    stopIncomingMessageWatch?.()
+    stopIncomingMessageWatch = undefined
     stopBusinessReplyWatch?.()
     stopBusinessReplyWatch = undefined
     stopBusinessReviewWatch?.()
@@ -774,6 +761,9 @@ onMounted(async () => {
         stopPeopleWatch = watchTravelers(user.uid, (travelers) => {
           people.value = travelers
         }, (error) => console.warn('Could not load travelers:', error))
+        stopIncomingMessageWatch = watchIncomingMessages(user.uid, notifyIncomingMessage, (error) => {
+          console.warn('Could not watch incoming messages:', error)
+        })
         startBusinessReplyWatch()
         startBusinessReviewWatch()
       }
@@ -791,6 +781,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopAuthWatch?.()
   stopPeopleWatch?.()
+  stopIncomingMessageWatch?.()
   stopReviewWatch?.()
   stopBusinessReplyWatch?.()
   stopBusinessReviewWatch?.()
@@ -802,11 +793,14 @@ function navigateTo(screen) {
     screen = 'account'
   }
   if (screen === 'business' && !isAuthenticated.value) screen = 'account'
-  else if (screen === 'business' && userProfile.value.mode !== 'business') screen = 'profile'
+  else if (screen === 'business' && userProfile.value.mode !== 'business') screen = 'account'
   currentScreen.value = screen
-  selectedNav.value = ['home', 'search', 'map', 'saved', 'profile'].includes(screen)
+  if (screen === 'messages' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {})
+  }
+  selectedNav.value = ['home', 'search', 'map', 'saved', 'messages', 'account'].includes(screen)
     ? screen
-    : 'profile'
+    : 'account'
   if (screen === 'search') searchFilter.value = 'all'
 }
 
@@ -875,7 +869,7 @@ async function saveProfile(profile) {
       type: 'negative',
       message: isEnglish.value ? 'Upload a valid photo.' : 'Sube una foto válida.',
     })
-    return
+    return false
   }
   let nextProfile = { ...profile, avatarUrl: photoUrl || '' }
   avatarLoadFailed.value = false
@@ -883,13 +877,47 @@ async function saveProfile(profile) {
     try {
       nextProfile = await updateAccountProfile(nextProfile)
     } catch (error) {
-      $q.notify({ type: 'negative', message: accountErrorText(error) })
-      return
+      accountError.value = accountErrorText(error)
+      $q.notify({ type: 'negative', message: accountError.value })
+      return false
     }
   }
   userProfile.value = nextProfile
   writeStorage(STORAGE_KEYS.profile, userProfile.value)
   $q.notify({ type: 'positive', message: isEnglish.value ? 'Profile saved.' : 'Perfil guardado.' })
+  return true
+}
+
+async function updateAccountDetails(profile) {
+  accountLoading.value = true
+  accountError.value = ''
+  try {
+    await saveProfile(profile)
+  } catch (error) {
+    accountError.value = accountErrorText(error)
+  } finally {
+    accountLoading.value = false
+  }
+}
+
+async function completeProfilePhoto(avatarUrl) {
+  accountLoading.value = true
+  accountError.value = ''
+  try {
+    if (await saveProfile({ ...userProfile.value, avatarUrl })) {
+      showProfilePhotoStep.value = false
+      navigateTo('account')
+    }
+  } catch (error) {
+    accountError.value = accountErrorText(error)
+  } finally {
+    accountLoading.value = false
+  }
+}
+
+function skipProfilePhoto() {
+  showProfilePhotoStep.value = false
+  navigateTo('account')
 }
 
 function openSettings() {
@@ -899,20 +927,10 @@ function openSettings() {
   settingsOpen.value = true
 }
 
-function saveSettings() {
-  preferences.value = { ...settingsDraft.value }
+function selectTheme(theme) {
+  settingsDraft.value = { ...settingsDraft.value, theme }
+  preferences.value = { ...preferences.value, theme }
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
-  settingsOpen.value = false
-  $q.notify({
-    type: 'positive',
-    message: isEnglish.value ? 'Appearance saved.' : 'Personalización guardada.',
-  })
-}
-
-function saveThemeSettings() {
-  preferences.value = { ...preferences.value, theme: settingsDraft.value.theme }
-  writeStorage(STORAGE_KEYS.preferences, preferences.value)
-  $q.notify({ type: 'positive', message: isEnglish.value ? 'Colors saved.' : 'Colores guardados.' })
 }
 
 function saveFontSettings() {
@@ -932,11 +950,7 @@ function openCustomThemeEditor() {
 }
 
 function saveCustomTheme() {
-  const name = newThemeDraft.value.name.trim()
-  if (!name) {
-    $q.notify({ type: 'warning', message: isEnglish.value ? 'Name your palette first.' : 'Escribe un nombre para la paleta.' })
-    return
-  }
+  const name = newThemeDraft.value.name.trim() || `${isEnglish.value ? 'Palette' : 'Paleta'} ${customThemes.value.length + 1}`
   const theme = {
     value: `custom-${Date.now()}`,
     es: name,
@@ -950,6 +964,18 @@ function saveCustomTheme() {
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
   cancelCustomTheme()
   $q.notify({ type: 'positive', message: isEnglish.value ? 'Palette saved and applied.' : 'Paleta guardada y aplicada.' })
+}
+
+function deleteCustomTheme(themeId) {
+  if (allThemeOptions.value.length <= 1) return
+  customThemes.value = customThemes.value.filter((theme) => theme.value !== themeId)
+  writeStorage(STORAGE_KEYS.themes, customThemes.value)
+  if (preferences.value.theme === themeId) {
+    preferences.value = { ...preferences.value, theme: 'turisgo' }
+    writeStorage(STORAGE_KEYS.preferences, preferences.value)
+  }
+  if (settingsDraft.value.theme === themeId) settingsDraft.value = { ...settingsDraft.value, theme: preferences.value.theme }
+  $q.notify({ type: 'positive', message: isEnglish.value ? 'Palette deleted.' : 'Paleta eliminada.' })
 }
 
 function openCustomFontEditor() {
@@ -987,7 +1013,7 @@ function saveCustomFont() {
     $q.notify({ type: 'warning', message: isEnglish.value ? 'Search the catalog and choose a typeface first.' : 'Busca y selecciona una tipografía del catálogo.' })
     return
   }
-  const font = { name, es: name, en: name, value: family, sample: 'Aa Bb Ññ 123' }
+  const font = { name, es: name, en: name, value: family, sample: 'Aa' }
   const withoutDuplicate = customFonts.value.filter((item) => item.name.toLowerCase() !== name.toLowerCase())
   customFonts.value = [...withoutDuplicate, font]
   writeStorage(STORAGE_KEYS.fonts, customFonts.value)
@@ -996,6 +1022,19 @@ function saveCustomFont() {
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
   cancelCustomFont()
   $q.notify({ type: 'positive', message: isEnglish.value ? 'Typeface saved and applied.' : 'Tipografía guardada y aplicada.' })
+}
+
+function deleteCustomFont(fontFamily) {
+  if (fontOptions.value.length <= 1) return
+  customFonts.value = customFonts.value.filter((font) => font.value !== fontFamily)
+  writeStorage(STORAGE_KEYS.fonts, customFonts.value)
+  const fallbackFont = builtInFontOptions[0].value
+  if (preferences.value.font === fontFamily) {
+    preferences.value = { ...preferences.value, font: fallbackFont }
+    writeStorage(STORAGE_KEYS.preferences, preferences.value)
+  }
+  if (settingsDraft.value.font === fontFamily) settingsDraft.value = { ...settingsDraft.value, font: preferences.value.font }
+  $q.notify({ type: 'positive', message: isEnglish.value ? 'Typeface deleted.' : 'Tipografía eliminada.' })
 }
 
 function accountErrorText(error) {
@@ -1017,6 +1056,7 @@ function accountErrorText(error) {
     'username-invalid': 'El usuario debe tener entre 3 y 24 caracteres válidos.',
     'profile-not-found': 'No encontramos el perfil para esta cuenta.',
     'account-details-required': 'Completa el nombre, teléfono, tipo de cuenta y nombre de empresa si aplica.',
+    'phone-invalid': 'Escribe un teléfono de El Salvador con 8 dígitos; puedes incluir +503.',
     'auth-required': 'Inicia sesión para continuar.',
   }
   return messages[code] || (isEnglish.value ? `Could not complete the account action${code ? ` (Firebase: ${code})` : ''}. Check Firebase Authentication and Firestore rules.` : `No se pudo completar la acción${code ? ` (Firebase: ${code})` : ''}. Revisa Firebase Authentication y las reglas de Firestore.`)
@@ -1028,8 +1068,10 @@ async function register(form) {
   try {
     const profile = await registerAccount(form)
     userProfile.value = { ...userProfile.value, ...profile }
+    isAuthenticated.value = true
+    showProfilePhotoStep.value = true
     writeStorage(STORAGE_KEYS.profile, userProfile.value)
-    navigateTo('profile')
+    navigateTo('account')
     $q.notify({ type: 'positive', message: isEnglish.value ? 'Account created.' : 'Cuenta creada.' })
   } catch (error) {
     accountError.value = accountErrorText(error)
@@ -1044,8 +1086,9 @@ async function login(credentials) {
   try {
     const profile = await loginAccount(credentials.email, credentials.password)
     userProfile.value = { ...userProfile.value, ...profile }
+    isAuthenticated.value = true
     writeStorage(STORAGE_KEYS.profile, userProfile.value)
-    navigateTo('profile')
+    navigateTo('account')
   } catch (error) {
     accountError.value = accountErrorText(error)
   } finally {
@@ -1055,8 +1098,29 @@ async function login(credentials) {
 
 async function logout() {
   await logoutAccount()
+  isAuthenticated.value = false
+  showProfilePhotoStep.value = false
   navigateTo('home')
   $q.notify({ type: 'positive', message: isEnglish.value ? 'Signed out.' : 'Sesión cerrada.' })
+}
+
+async function switchAccount() {
+  await logoutAccount()
+  isAuthenticated.value = false
+  showProfilePhotoStep.value = false
+  accountError.value = ''
+  userProfile.value = {
+    uid: '',
+    name: '',
+    username: '',
+    mode: '',
+    businessName: '',
+    phone: '',
+    email: '',
+    avatarUrl: '',
+  }
+  writeStorage(STORAGE_KEYS.profile, userProfile.value)
+  navigateTo('account')
 }
 
 function toggleLanguage() {
@@ -1085,7 +1149,46 @@ function haversineMeters(from, to) {
   return 6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function verifyVisit(place) {
+function getBestLocationFix() {
+  return new Promise((resolve, reject) => {
+    const geolocation = navigator.geolocation
+    let watchId = null
+    let bestPosition = null
+    let settled = false
+    const finish = (callback, value) => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timer)
+      if (watchId !== null) geolocation.clearWatch(watchId)
+      callback(value)
+    }
+    const timer = window.setTimeout(() => {
+      if (bestPosition) finish(resolve, bestPosition)
+      else finish(reject, { code: 2 })
+    }, 20000)
+
+    try {
+      watchId = geolocation.watchPosition(
+        (position) => {
+          if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+            bestPosition = position
+          }
+          // Keep collecting for up to 20 seconds unless GPS reaches a good fix.
+          if (position.coords.accuracy <= 1000) finish(resolve, position)
+        },
+        (error) => {
+          if (error.code === 1) finish(reject, error)
+          else if (bestPosition) finish(resolve, bestPosition)
+        },
+        { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 },
+      )
+    } catch (error) {
+      finish(reject, error)
+    }
+  })
+}
+
+async function verifyVisit(place) {
   const placeCoordinates = normalizeCoordinates(place.coordinates)
   if (!placeCoordinates) {
     $q.notify({
@@ -1106,51 +1209,50 @@ function verifyVisit(place) {
     return
   }
   checkingVisit.value = true
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      checkingVisit.value = false
-      const distance = haversineMeters(
-        [position.coords.latitude, position.coords.longitude],
-        placeCoordinates,
-      )
-      const accuracy = Math.max(0, position.coords.accuracy || 0)
+  try {
+    const position = await getBestLocationFix()
+    const distance = haversineMeters(
+      [position.coords.latitude, position.coords.longitude],
+      placeCoordinates,
+    )
+    const accuracy = Math.max(0, position.coords.accuracy || 0)
+    // Keep a local radius for inaccurate fixes; only expand it when the
+    // device provides a reasonably precise GPS reading.
+    const allowedDistance = accuracy > 10000 ? 2500 : Math.max(2500, accuracy * 1.25)
+    if (distance > allowedDistance) {
       if (accuracy > 10000) {
-        $q.notify({ type: 'warning', message: isEnglish.value ? 'Your device location is too imprecise. Turn on precise location and try again.' : 'La ubicación del dispositivo es muy imprecisa. Activa la ubicación precisa e inténtalo de nuevo.' })
+        $q.notify({ type: 'warning', message: isEnglish.value ? 'Your device location is too imprecise to confirm this visit from here. Turn on precise location and try again.' : 'La ubicación del dispositivo es muy imprecisa para confirmar la visita desde aquí. Activa la ubicación precisa e inténtalo de nuevo.' })
         return
       }
-      const allowedDistance = Math.max(2500, accuracy * 1.25)
-      if (distance > allowedDistance) {
-        $q.notify({
-          type: 'warning',
-          message: isEnglish.value
-            ? `You are about ${(distance / 1000).toFixed(1)} km away. Reviews unlock within about ${(allowedDistance / 1000).toFixed(1)} km based on GPS accuracy.`
-            : `Estás a unos ${(distance / 1000).toFixed(1)} km. El límite actual es ${(allowedDistance / 1000).toFixed(1)} km según la precisión del GPS.`,
-        })
-        return
-      }
-      visitProofs.value = { ...visitProofs.value, [place.id]: new Date().toISOString() }
-      writeStorage(STORAGE_KEYS.visits, visitProofs.value)
       $q.notify({
-        type: 'positive',
+        type: 'warning',
         message: isEnglish.value
-          ? 'Visit verified. You can now leave a review.'
-          : 'Visita verificada. Ya puedes dejar tu reseña.',
+          ? `You are about ${(distance / 1000).toFixed(1)} km away. Reviews unlock within about ${(allowedDistance / 1000).toFixed(1)} km based on GPS accuracy.`
+          : `Estás a unos ${(distance / 1000).toFixed(1)} km. El límite actual es ${(allowedDistance / 1000).toFixed(1)} km según la precisión del GPS.`,
       })
-    },
-    (error) => {
-      checkingVisit.value = false
-      const message =
-        error.code === 1
-          ? isEnglish.value
-            ? 'Allow location access to verify your visit.'
-            : 'Permite el acceso a la ubicación para verificar tu visita.'
-          : isEnglish.value
-            ? 'Could not read your location. Try again outdoors.'
-            : 'No pudimos obtener tu ubicación. Inténtalo de nuevo al aire libre.'
-      $q.notify({ type: 'warning', message })
-    },
-    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
-  )
+      return
+    }
+    visitProofs.value = { ...visitProofs.value, [place.id]: new Date().toISOString() }
+    writeStorage(STORAGE_KEYS.visits, visitProofs.value)
+    $q.notify({
+      type: 'positive',
+      message: isEnglish.value
+        ? 'Visit verified. You can now leave a review.'
+        : 'Visita verificada. Ya puedes dejar tu reseña.',
+    })
+  } catch (error) {
+    const message =
+      error.code === 1
+        ? isEnglish.value
+          ? 'Allow location access to verify your visit.'
+          : 'Permite el acceso a la ubicación para verificar tu visita.'
+        : isEnglish.value
+          ? 'Could not read your location. Try again outdoors.'
+          : 'No pudimos obtener tu ubicación. Inténtalo de nuevo al aire libre.'
+    $q.notify({ type: 'warning', message })
+  } finally {
+    checkingVisit.value = false
+  }
 }
 
 function normalizeCoordinates(value) {
@@ -1323,9 +1425,45 @@ async function replyToReview({ reviewId, message }) {
 async function sendMessage({ uid, text }) {
   if (!isAuthenticated.value || !userProfile.value.uid) return navigateTo('account')
   try {
-    await sendChatMessage(userProfile.value.uid, uid, text)
+    await sendChatMessage(userProfile.value.uid, uid, text, userProfile.value)
   } catch (error) {
     $q.notify({ type: 'negative', message: accountErrorText(error) })
+  }
+}
+
+function notifyIncomingMessage(message) {
+  const sender = people.value.find((person) => person.uid === message.senderUid)
+  const senderName = message.senderName || sender?.name || (isEnglish.value ? 'New message' : 'Nuevo mensaje')
+  const body = String(message.text || '').slice(0, 180)
+  $q.notify({
+    type: 'info',
+    message: `${senderName}: ${body}`,
+    caption: isEnglish.value ? 'New TURISGO message' : 'Nuevo mensaje de TURISGO',
+    timeout: 6500,
+    actions: [{
+      label: isEnglish.value ? 'OPEN' : 'VER',
+      color: 'white',
+      handler: () => navigateTo('messages'),
+    }],
+  })
+
+  if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return
+  if (document.visibilityState !== 'hidden') return
+  const options = {
+    body,
+    icon: `${import.meta.env.BASE_URL}icons/favicon-128x128.png`,
+    tag: `turisgo-message-${message.id}`,
+  }
+  try {
+    const notification = new Notification(`TURISGO · ${senderName}`, options)
+    notification.onclick = () => {
+      window.focus()
+      navigateTo('messages')
+      notification.close()
+    }
+  } catch (error) {
+    // Page notifications are unavailable in some mobile browsers.
+    console.info('System notifications are unavailable in this browser:', error)
   }
 }
 

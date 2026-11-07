@@ -8,8 +8,11 @@ import {
 import {
   addDoc,
   collection,
+  collectionGroup,
   doc,
   getDoc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -18,8 +21,8 @@ import {
   setDoc,
   where,
 } from 'firebase/firestore'
-import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage'
-import { auth, db, storage } from '../boot/firebase'
+import { auth, db } from '../boot/firebase'
+import { normalizeElSalvadorPhone } from './phoneUtils'
 
 function normalizeUsername(value) {
   return value.trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9._-]/g, '')
@@ -27,7 +30,13 @@ function normalizeUsername(value) {
 
 export async function registerAccount(form) {
   const username = normalizeUsername(form.username)
-  if (!['personal', 'business'].includes(form.mode) || !form.name?.trim() || !form.phone?.trim() || (form.mode === 'business' && !form.businessName?.trim())) {
+  const phone = normalizeElSalvadorPhone(form.phone)
+  if (!['personal', 'business'].includes(form.mode) || !form.name?.trim() || !phone || (form.mode === 'business' && !form.businessName?.trim())) {
+    if (!phone) {
+      const error = new Error('phone-invalid')
+      error.code = 'phone-invalid'
+      throw error
+    }
     const error = new Error('account-details-required')
     error.code = 'account-details-required'
     throw error
@@ -42,26 +51,25 @@ export async function registerAccount(form) {
 
   try {
     await runTransaction(db, async (transaction) => {
-      const usernameRef = doc(db, 'usernameIndex', username)
-      const usernameSnapshot = await transaction.get(usernameRef)
-      if (usernameSnapshot.exists()) {
+      // userProfiles is keyed by the public username in the existing project.
+      const profileRef = doc(db, 'userProfiles', username)
+      const profileSnapshot = await transaction.get(profileRef)
+      if (profileSnapshot.exists()) {
         const error = new Error('username-already-used')
         error.code = 'username-already-used'
         throw error
       }
-      transaction.set(usernameRef, { uid, createdAt: serverTimestamp() })
-      transaction.set(doc(db, 'users', uid), {
+      transaction.set(profileRef, {
         uid,
         username,
         name: form.name.trim(),
         mode: form.mode,
-        businessName: form.mode === 'business' ? form.businessName.trim() : '',
         avatarUrl: '',
-        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       })
       transaction.set(doc(db, 'accounts', uid), {
         email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
+        phone,
         createdAt: serverTimestamp(),
       })
     })
@@ -70,15 +78,19 @@ export async function registerAccount(form) {
     throw error
   }
 
-  return { uid, username, name: form.name.trim(), mode: form.mode, businessName: form.businessName.trim(), phone: form.phone.trim(), email: form.email.trim().toLowerCase(), avatarUrl: '' }
+  return { uid, username, name: form.name.trim(), mode: form.mode, businessName: form.businessName?.trim() || '', phone, email: form.email.trim().toLowerCase(), avatarUrl: '' }
 }
 
 export async function loginAccount(email, password) {
   const credential = await signInWithEmailAndPassword(auth, email.trim(), password)
-  const profileSnapshot = await getDoc(doc(db, 'users', credential.user.uid))
+  const profileSnapshot = await getDocs(query(
+    collection(db, 'userProfiles'),
+    where('uid', '==', credential.user.uid),
+    limit(1),
+  ))
   const accountSnapshot = await getDoc(doc(db, 'accounts', credential.user.uid))
-  if (!profileSnapshot.exists()) throw new Error('profile-not-found')
-  return { ...profileSnapshot.data(), ...(accountSnapshot.exists() ? accountSnapshot.data() : {}), uid: credential.user.uid }
+  if (profileSnapshot.empty) throw new Error('profile-not-found')
+  return { ...profileSnapshot.docs[0].data(), ...(accountSnapshot.exists() ? accountSnapshot.data() : {}), uid: credential.user.uid }
 }
 
 export function logoutAccount() {
@@ -91,55 +103,71 @@ export function watchAuthentication(onChange) {
 
 export async function loadAccountProfile(uid) {
   const [profileSnapshot, accountSnapshot] = await Promise.all([
-    getDoc(doc(db, 'users', uid)),
+    getDocs(query(collection(db, 'userProfiles'), where('uid', '==', uid), limit(1))),
     getDoc(doc(db, 'accounts', uid)),
   ])
-  if (!profileSnapshot.exists()) return null
-  return { ...profileSnapshot.data(), ...(accountSnapshot.exists() ? accountSnapshot.data() : {}), uid }
+  if (profileSnapshot.empty) return null
+  return { ...profileSnapshot.docs[0].data(), ...(accountSnapshot.exists() ? accountSnapshot.data() : {}), uid }
 }
 
 export async function updateAccountProfile(profile) {
   const username = normalizeUsername(profile.username)
+  const phone = normalizeElSalvadorPhone(profile.phone)
   if (!profile.uid || username.length < 3 || username.length > 24) {
     const error = new Error('username-invalid')
     error.code = 'username-invalid'
     throw error
   }
-  let avatarUrl = profile.avatarUrl || ''
-  if (avatarUrl.startsWith('data:')) {
-    const imageRef = storageRef(storage, `users/${profile.uid}/avatar-${Date.now()}.jpg`)
-    await uploadString(imageRef, avatarUrl, 'data_url', { contentType: 'image/jpeg' })
-    avatarUrl = await getDownloadURL(imageRef)
+  if (!phone) {
+    const error = new Error('phone-invalid')
+    error.code = 'phone-invalid'
+    throw error
   }
+  // Profile photos are already compressed by the picker (max 60 KB). Store
+  // the data URL in the existing avatarUrl field, matching current documents
+  // and avoiding a dependency on Firebase Storage setup/rules for user photos.
+  const avatarUrl = profile.avatarUrl || ''
+  const currentProfiles = await getDocs(query(
+    collection(db, 'userProfiles'),
+    where('uid', '==', profile.uid),
+    limit(1),
+  ))
+  const oldUsername = currentProfiles.docs[0]?.id || ''
   await runTransaction(db, async (transaction) => {
-    const userRef = doc(db, 'users', profile.uid)
-    const userSnapshot = await transaction.get(userRef)
-    const oldUsername = userSnapshot.data()?.username || ''
-    const usernameRef = doc(db, 'usernameIndex', username)
-    const usernameSnapshot = await transaction.get(usernameRef)
-    if (usernameSnapshot.exists() && usernameSnapshot.data().uid !== profile.uid) {
+    const oldProfileRef = oldUsername ? doc(db, 'userProfiles', oldUsername) : null
+    const newProfileRef = doc(db, 'userProfiles', username)
+    const [oldProfileSnapshot, newProfileSnapshot] = await Promise.all([
+      oldProfileRef ? transaction.get(oldProfileRef) : Promise.resolve(null),
+      transaction.get(newProfileRef),
+    ])
+    if (newProfileSnapshot.exists() && newProfileSnapshot.data().uid !== profile.uid) {
       const error = new Error('username-already-used')
       error.code = 'username-already-used'
       throw error
     }
-    if (oldUsername && oldUsername !== username) transaction.delete(doc(db, 'usernameIndex', oldUsername))
-    if (!usernameSnapshot.exists()) transaction.set(usernameRef, { uid: profile.uid, createdAt: serverTimestamp() })
-    transaction.set(userRef, {
+    if (oldUsername && oldUsername !== username && oldProfileSnapshot?.exists()) transaction.delete(oldProfileRef)
+    transaction.set(newProfileRef, {
       uid: profile.uid,
       username,
       name: profile.name.trim(),
       mode: profile.mode,
-      businessName: profile.businessName || '',
       avatarUrl,
       updatedAt: serverTimestamp(),
     }, { merge: true })
+    transaction.set(doc(db, 'accounts', profile.uid), {
+      phone,
+      updatedAt: serverTimestamp(),
+    }, { merge: true })
   })
-  return { ...profile, username, avatarUrl }
+  return { ...profile, username, phone, avatarUrl }
 }
 
 export function watchTravelers(currentUid, onChange, onError) {
-  const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-    onChange(snapshot.docs.map((entry) => entry.data()).filter((user) => user.uid !== currentUid))
+  const unsubscribe = onSnapshot(collection(db, 'userProfiles'), (snapshot) => {
+    onChange(snapshot.docs
+      .map((entry) => ({ id: entry.id, ...entry.data() }))
+      // Legacy/test profiles without an Auth uid cannot be used as chat accounts.
+      .filter((user) => user.uid && user.uid !== currentUid))
   }, onError)
   return unsubscribe
 }
@@ -161,10 +189,32 @@ export function watchMessages(firstUid, secondUid, onChange, onError) {
   }, onError)
 }
 
-export async function sendChatMessage(senderUid, recipientUid, text) {
+export async function sendChatMessage(senderUid, recipientUid, text, senderProfile = {}) {
   const conversationId = getConversationId(senderUid, recipientUid)
   await ensureConversation(senderUid, recipientUid)
-  await addDoc(collection(db, 'chats', conversationId, 'messages'), { senderUid, text: text.trim(), createdAt: serverTimestamp() })
+  await addDoc(collection(db, 'chats', conversationId, 'messages'), {
+    senderUid,
+    recipientUid,
+    senderName: senderProfile.name || '',
+    senderUsername: senderProfile.username || '',
+    text: text.trim(),
+    createdAt: serverTimestamp(),
+  })
+}
+
+export function watchIncomingMessages(uid, onMessage, onError) {
+  const inbox = query(collectionGroup(db, 'messages'), where('recipientUid', '==', uid))
+  let initialized = false
+  return onSnapshot(inbox, (snapshot) => {
+    // Do not notify about old messages when the app starts or the user signs in.
+    if (!initialized) {
+      initialized = true
+      return
+    }
+    snapshot.docChanges()
+      .filter((change) => change.type === 'added')
+      .forEach((change) => onMessage({ id: change.doc.id, ...change.doc.data() }))
+  }, onError)
 }
 
 export function watchPlaceReviews(placeId, onChange, onError) {
