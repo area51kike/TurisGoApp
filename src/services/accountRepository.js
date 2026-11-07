@@ -259,6 +259,7 @@ export async function savePlaceReview(placeId, review) {
     placeId,
     userUid: auth.currentUser.uid,
     author: review.author,
+    avatarUrl: review.avatarUrl || '',
     rating: review.rating,
     text: review.text.trim(),
     date: review.date,

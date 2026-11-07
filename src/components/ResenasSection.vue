@@ -20,7 +20,14 @@
 
     <div v-if="reviews.length" class="review-list">
       <article v-for="(review, index) in reviews" :key="`${review.author}-${index}`" class="review-card">
-        <div class="review-card__head"><q-avatar size="34px" color="secondary" text-color="white">{{ review.author?.[0] || 'V' }}</q-avatar><div><strong>{{ review.author }}</strong><small>{{ review.date || (isEnglish ? 'Sample review' : 'Reseña de ejemplo') }}</small></div><span class="review-rating"><q-icon name="star" /> {{ review.rating }}.0</span></div>
+        <div class="review-card__head">
+          <q-avatar class="review-card__avatar" size="38px" color="secondary" text-color="white">
+            <img v-if="review.avatarUrl" :src="review.avatarUrl" alt="" />
+            <span v-else>{{ review.author?.[0] || 'V' }}</span>
+          </q-avatar>
+          <div class="review-card__identity"><strong>{{ review.author }}</strong><small>{{ review.date || (isEnglish ? 'Sample review' : 'Reseña de ejemplo') }}</small></div>
+          <span class="review-rating"><q-icon name="star" /> {{ review.rating }}.0</span>
+        </div>
         <p>{{ review.text }}</p>
         <span v-if="review.sample" class="sample-tag">{{ isEnglish ? 'SAMPLE' : 'MUESTRA' }}</span>
       </article>

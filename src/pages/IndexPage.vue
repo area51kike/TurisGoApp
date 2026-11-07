@@ -37,7 +37,12 @@
     </header>
 
     <main class="screen-content" :class="{ 'screen-content--home': currentScreen === 'home' }">
-      <div v-if="!isOnline" class="offline-message-state" role="alert">
+      <div v-if="!connectionChecked" class="offline-message-state" role="status">
+        <span class="offline-message-state__icon" aria-hidden="true">…</span>
+        <h2>{{ isEnglish ? 'Checking connection' : 'Comprobando conexión' }}</h2>
+        <p>{{ isEnglish ? 'Please wait a moment.' : 'Espera un momento.' }}</p>
+      </div>
+      <div v-else-if="!isOnline" class="offline-message-state" role="alert">
         <span class="offline-message-state__icon" aria-hidden="true">!</span>
         <h2>{{ isEnglish ? 'No internet connection' : 'Sin conexión a Internet' }}</h2>
         <p>{{ isEnglish ? 'Check your internet connection to use TURISGO, then try again.' : 'Revisa tu conexión a Internet para usar TURISGO e inténtalo de nuevo.' }}</p>
@@ -513,6 +518,8 @@ const isEnglish = ref(readStorage(STORAGE_KEYS.language, false))
 const showTutorial = ref(!readStorage(STORAGE_KEYS.tutorial, false))
 const currentTutorialStep = ref(0)
 const isOnline = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
+const connectionChecked = ref(false)
+let connectionCheckTimer
 const currentScreen = ref('home')
 const selectedNav = ref('home')
 const searchQuery = ref('')
@@ -794,9 +801,12 @@ watch(selectedPlace, (place) => {
 })
 
 onMounted(async () => {
-  isOnline.value = navigator.onLine
+  await checkInternetConnection()
   window.addEventListener('online', updateOnlineStatus)
   window.addEventListener('offline', updateOnlineStatus)
+  window.addEventListener('focus', checkInternetConnection)
+  document.addEventListener('visibilitychange', checkInternetConnection)
+  connectionCheckTimer = window.setInterval(checkInternetConnection, 15000)
   stopAuthWatch = watchAuthentication(async (user) => {
     stopPresence?.()
     stopPresence = undefined
@@ -843,6 +853,9 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('online', updateOnlineStatus)
   window.removeEventListener('offline', updateOnlineStatus)
+  window.removeEventListener('focus', checkInternetConnection)
+  document.removeEventListener('visibilitychange', checkInternetConnection)
+  window.clearInterval(connectionCheckTimer)
   stopAuthWatch?.()
   void stopPresence?.()
   stopPeopleWatch?.()
@@ -852,8 +865,40 @@ onBeforeUnmount(() => {
   stopBusinessReviewWatch?.()
 })
 
+async function checkInternetConnection() {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return
+  if (!navigator.onLine) {
+    isOnline.value = false
+    connectionChecked.value = true
+    return
+  }
+
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 4000)
+  try {
+    // navigator.onLine can remain true when Wi-Fi is connected without internet.
+    // A no-cors request is enough: an opaque response means the host was reachable.
+    await fetch(`https://www.gstatic.com/generate_204?check=${Date.now()}`, {
+      mode: 'no-cors',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+    isOnline.value = true
+  } catch {
+    isOnline.value = false
+  } finally {
+    window.clearTimeout(timeout)
+    connectionChecked.value = true
+  }
+}
+
 function updateOnlineStatus() {
-  isOnline.value = navigator.onLine
+  if (!navigator.onLine) {
+    isOnline.value = false
+    connectionChecked.value = true
+    return
+  }
+  void checkInternetConnection()
 }
 
 function navigateTo(screen) {
@@ -1359,6 +1404,7 @@ async function submitReview(review) {
   const entry = {
     id,
     author: userProfile.value.name || (isEnglish.value ? 'Traveler' : 'Viajero'),
+    avatarUrl: userProfile.value.avatarUrl || '',
     rating: review.rating,
     text: review.text,
     date: new Intl.DateTimeFormat(isEnglish.value ? 'en-US' : 'es-SV', {

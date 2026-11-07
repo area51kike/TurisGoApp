@@ -1015,7 +1015,7 @@ button {
   background: var(--surface);
 }
 .review-label {
-  color: var(--text-muted);
+  color: #fff;
   font-size: 10px;
   font-weight: 650;
 }
@@ -1024,8 +1024,14 @@ button {
 }
 .review-form .q-field__control {
   background: var(--app-bg);
-  color: var(--text-primary);
+  color: #fff;
 }
+.review-form .q-field__native,
+.review-form input,
+.review-form textarea { color: #fff !important; }
+.review-form .q-field__native::placeholder,
+.review-form input::placeholder,
+.review-form textarea::placeholder { color: #a9c0d3 !important; opacity: 1; }
 .review-form .q-btn {
   min-height: 39px;
   font-size: 10px;
@@ -1041,22 +1047,32 @@ button {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
+  color: #fff;
 }
 .review-card__head {
   display: flex;
   align-items: center;
   gap: 9px;
 }
-.review-card__head > div {
+.review-card__avatar {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+}
+.review-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.review-card__identity {
   flex: 1;
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 .review-card__head strong {
   font-size: 10px;
+  color: #fff;
 }
 .review-card__head small {
-  color: var(--text-muted);
+  color: #c3d5e4;
   font-size: 8px;
 }
 .review-rating {
@@ -1069,7 +1085,7 @@ button {
 }
 .review-card p {
   margin: 10px 0 0;
-  color: var(--text-muted);
+  color: #fff;
   font-size: 10px;
   line-height: 1.55;
 }
