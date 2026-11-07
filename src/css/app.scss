@@ -2000,6 +2000,55 @@ button {
   gap: 12px;
   flex-wrap: wrap;
 }
+.account-businesses {
+  display: grid;
+  gap: 10px;
+}
+.account-businesses__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.account-businesses__heading h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+}
+.account-business-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.account-business-item__details {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.account-business-item__details strong,
+.account-business-item__details span,
+.account-business-item__details small {
+  overflow: hidden;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-business-item__details span,
+.account-business-item__details small,
+.account-businesses__empty {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.account-businesses__empty {
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+}
 .account-business-link { width: 100%; min-height: 46px; }
 .account-card__identity { display: grid; flex: 1; min-width: 130px; gap: 3px; }
 .account-card__identity strong,

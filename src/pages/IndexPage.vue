@@ -83,12 +83,15 @@
         :user-profile="userProfile"
         :show-photo-step="showProfilePhotoStep"
         :has-business-profile="Boolean(businessProfile.name)"
+        :businesses="ownedBusinessProfiles"
         @login="login"
         @register="register"
         @logout="logout"
         @switch-account="switchAccount"
         @open-settings="openSettings"
         @open-business="openBusinessProfile"
+        @add-business="addBusinessProfile"
+        @edit-business="editBusinessProfile"
         @update-profile="updateAccountDetails"
         @complete-photo="completeProfilePhoto"
         @skip-photo="skipProfilePhoto"
@@ -737,6 +740,21 @@ const profileInitials = computed(() =>
     .toUpperCase(),
 )
 const isAuthenticated = ref(false)
+const ownedBusinessProfiles = computed(() => {
+  if (!isAuthenticated.value) return []
+  const ownerUid = userProfile.value.uid
+  const usernameId = `business-${(userProfile.value.username || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)}`
+  const owned = new Map()
+  for (const profile of cloudBusinessListings.value) {
+    if (profile.ownerUid === ownerUid || (!profile.ownerUid && profile.id === usernameId)) {
+      owned.set(profile.id, profile)
+    }
+  }
+  if (businessProfile.value.id && (businessProfile.value.ownerUid === ownerUid || businessProfile.value.id === usernameId)) {
+    owned.set(businessProfile.value.id, businessProfile.value)
+  }
+  return [...owned.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+})
 const accountLoading = ref(false)
 const accountError = ref('')
 const people = ref([])
@@ -1375,6 +1393,41 @@ async function openBusinessProfile() {
   navigateTo('business')
 }
 
+function addBusinessProfile() {
+  businessProfile.value = {
+    id: '',
+    name: '',
+    nameEn: '',
+    type: 'hotel',
+    region: '',
+    description: '',
+    descriptionEn: '',
+    category: 'Negocio local',
+    categoryEn: 'Local business',
+    priceLabel: '',
+    priceLabelEn: '',
+    commissionRate: 0,
+    websiteUrl: '',
+    mapUrl: '',
+    latitude: '',
+    longitude: '',
+    coordinates: null,
+    photoUrls: [],
+    branches: [],
+    updatedAt: '',
+  }
+  writeStorage(STORAGE_KEYS.business, businessProfile.value)
+  navigateTo('business')
+}
+
+function editBusinessProfile(profile) {
+  businessProfile.value = { ...profile }
+  writeStorage(STORAGE_KEYS.business, businessProfile.value)
+  startBusinessReplyWatch()
+  startBusinessReviewWatch()
+  navigateTo('business')
+}
+
 async function saveBusinessProfile(profile) {
   const photoUrls = (profile.photoUrls || []).map((url) => url.trim()).filter(Boolean)
   if (
@@ -1402,10 +1455,7 @@ async function saveBusinessProfile(profile) {
   }
   const businessId =
     profile.id ||
-    `business-${(userProfile.value.username || 'viajero')
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]/g, '')
-      .slice(0, 40)}`
+    `business-${(userProfile.value.uid || userProfile.value.username || 'viajero').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32)}-${Date.now().toString(36)}`
   const savedProfile = {
     ...profile,
     id: businessId,
@@ -1421,6 +1471,10 @@ async function saveBusinessProfile(profile) {
     const persistedProfile = await saveBusinessListing(savedProfile)
     businessProfile.value = { ...savedProfile, ...persistedProfile }
     writeStorage(STORAGE_KEYS.business, businessProfile.value)
+    cloudBusinessListings.value = [
+      ...cloudBusinessListings.value.filter((item) => item.id !== businessId),
+      businessProfile.value,
+    ]
     startBusinessReplyWatch()
     startBusinessReviewWatch()
     $q.notify({

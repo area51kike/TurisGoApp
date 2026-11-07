@@ -38,15 +38,30 @@
         <q-btn flat rounded no-caps icon="swap_horiz" :label="isEnglish ? 'Switch account' : 'Cambiar cuenta'" @click="$emit('switch-account')" />
         <q-btn flat rounded color="negative" icon="logout" :label="isEnglish ? 'Sign out' : 'Cerrar sesión'" @click="$emit('logout')" />
       </div>
-      <q-btn
-        class="account-business-link"
-        unelevated
-        rounded
-        color="primary"
-        icon="storefront"
-        :label="hasBusinessProfile ? (isEnglish ? 'Manage business' : 'Administrar empresa') : (isEnglish ? 'Add a business' : 'Añadir empresa')"
-        @click="$emit('open-business')"
-      />
+      <section v-if="userProfile.mode === 'business'" class="account-businesses">
+        <div class="account-businesses__heading">
+          <div>
+            <span class="eyebrow">{{ isEnglish ? 'YOUR BUSINESSES' : 'TUS NEGOCIOS' }}</span>
+            <h2>{{ isEnglish ? 'Business profiles' : 'Perfiles empresariales' }}</h2>
+          </div>
+          <q-btn unelevated rounded color="primary" icon="add" :label="isEnglish ? 'Add' : 'Añadir'" @click="$emit('add-business')" />
+        </div>
+        <article v-for="business in businesses" :key="business.id" class="account-business-item">
+          <q-avatar rounded size="54px" color="primary" text-color="white">
+            <img v-if="business.photoUrls?.[0]" :src="business.photoUrls[0]" alt="" />
+            <q-icon v-else name="storefront" />
+          </q-avatar>
+          <div class="account-business-item__details">
+            <strong>{{ business.name }}</strong>
+            <span>{{ business.region || (isEnglish ? 'Location not set' : 'Ubicación pendiente') }}</span>
+            <small>{{ business.branches?.length || 0 }} {{ isEnglish ? 'branches' : 'sucursales' }}</small>
+          </div>
+          <q-btn outline rounded dense no-caps icon="edit" :label="isEnglish ? 'Edit' : 'Editar'" @click="$emit('edit-business', business)" />
+        </article>
+        <div v-if="!businesses.length" class="account-businesses__empty">
+          {{ isEnglish ? 'You have not added a business profile yet.' : 'Todavía no has añadido un perfil de negocio.' }}
+        </div>
+      </section>
       <div v-if="editingProfile" class="account-card account-edit-card">
         <h2>{{ isEnglish ? 'Edit your account details' : 'Editar datos de la cuenta' }}</h2>
         <div class="account-photo-edit">
@@ -115,8 +130,9 @@ const props = defineProps({
   userProfile: { type: Object, default: () => ({}) },
   showPhotoStep: Boolean,
   hasBusinessProfile: Boolean,
+  businesses: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['login', 'register', 'logout', 'switch-account', 'open-settings', 'open-business', 'update-profile', 'complete-photo', 'skip-photo'])
+const emit = defineEmits(['login', 'register', 'logout', 'switch-account', 'open-settings', 'open-business', 'add-business', 'edit-business', 'update-profile', 'complete-photo', 'skip-photo'])
 const isLogin = ref(true)
 const showPassword = ref(false)
 const photoDraft = ref('')
