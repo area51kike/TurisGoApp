@@ -77,6 +77,27 @@ body,
   min-height: 100%;
   margin: 0;
 }
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell h4,
+.app-shell h5,
+.app-shell h6 {
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
+}
+.app-shell p,
+.app-shell .detail-description {
+  font-family: var(--font-description, 'DM Sans'), system-ui, sans-serif;
+}
+.app-shell .eyebrow,
+.app-shell h1 + p,
+.app-shell h2 + p,
+.app-shell h3 + p,
+.app-shell h4 + p {
+  font-family: var(--font-subtitle, 'DM Sans'), system-ui, sans-serif;
+}
+
 body {
   background: color-mix(in srgb, var(--app-bg) 82%, #000);
   color: var(--text-primary);
@@ -153,7 +174,7 @@ button {
   font-size: 20px;
 }
 .brand-lockup strong {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 16px;
   letter-spacing: 0.16em;
   display: block;
@@ -295,7 +316,7 @@ button {
 .section-heading h2 {
   margin: 3px 0 0;
   color: var(--text-primary);
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 21px;
   line-height: 1.15;
   font-weight: 700;
@@ -420,7 +441,7 @@ button {
 .page-heading h1 {
   margin: 5px 0 3px;
   color: var(--text-primary);
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 29px;
   line-height: 1.12;
 }
@@ -711,7 +732,7 @@ button {
 .detail-heading h1 {
   margin: 5px 0 8px;
   color: var(--text-primary);
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: clamp(25px, 7vw, 32px);
   line-height: 1.12;
 }
@@ -1181,7 +1202,7 @@ button {
   color: rgba(255, 255, 255, 0.78);
 }
 .budget-total strong {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 36px;
   line-height: 1.1;
 }
@@ -1651,7 +1672,7 @@ button {
 }
 .settings-dialog__top h2 {
   margin: 3px 0 0;
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 23px;
 }
 .settings-dialog__intro {
@@ -2011,7 +2032,7 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 14px;
   letter-spacing: 0.16em;
 }
@@ -2047,7 +2068,7 @@ button {
 .tutorial-copy h1 {
   max-width: 340px;
   margin: 6px auto 9px;
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 27px;
   line-height: 1.16;
 }
@@ -2304,7 +2325,7 @@ a:focus-visible {
   letter-spacing: -0.035em;
 }
 .hm-title em {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-style: italic;
   font-weight: 600;
   color: var(--gold);
@@ -2628,7 +2649,7 @@ a:focus-visible {
   width: 22px;
   flex: none;
   color: var(--text-muted);
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-title, 'Playfair Display'), Georgia, serif;
   font-size: 15px;
   font-style: italic;
 }

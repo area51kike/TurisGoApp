@@ -222,30 +222,23 @@
           <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a three-color palette' : 'Agregar paleta de tres colores'" @click="openCustomThemeEditor" />
         </div>
 
-        <div class="settings-choice-group">
-          <div class="settings-label">{{ isEnglish ? 'TYPEFACE' : 'TIPOGRAFÍA' }}</div>
-          <div
-            v-for="font in fontOptions"
-            :key="font.value"
-            class="appearance-choice-row"
-          >
+        <div v-for="role in fontRoles" :key="role.key" class="settings-choice-group">
+          <div class="settings-label">{{ isEnglish ? role.en : role.es }}</div>
+          <div v-for="font in fontOptions" :key="`${role.key}-${font.value}`" class="appearance-choice-row">
             <button
-              :class="['font-choice', { selected: settingsDraft.font === font.value }]"
-              @click="selectFont(font.value)"
+              :class="['font-choice', { selected: settingsDraft.fonts[role.key] === font.value }]"
+              @click="selectFont(role.key, font.value)"
             >
-              <span :style="{ fontFamily: font.value }">{{ font.sample }}</span>
+              <span :style="{ fontFamily: font.value }">{{ role.sample }}</span>
               <strong>{{ isEnglish ? font.en : font.es }}</strong>
-              <q-icon v-if="settingsDraft.font === font.value" name="check_circle" />
+              <q-icon v-if="settingsDraft.fonts[role.key] === font.value" name="check_circle" />
             </button>
-            <q-btn
-              v-if="font.name"
-              flat round dense icon="delete" class="appearance-choice-delete"
+            <q-btn v-if="font.name" flat round dense icon="delete" class="appearance-choice-delete"
               :disable="fontOptions.length <= 1"
               :aria-label="isEnglish ? `Delete ${font.en} typeface` : `Eliminar fuente ${font.es}`"
-              @click="deleteCustomFont(font.value)"
-            />
+              @click="deleteCustomFont(font.value)" />
           </div>
-          <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'" @click="openCustomFontEditor" />
+          <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'" @click="openCustomFontEditor(role.key)" />
         </div>
 
       </q-card>
@@ -448,9 +441,18 @@ function writeStorage(key, value) {
 const preferences = ref(
   readStorage(STORAGE_KEYS.preferences, {
     theme: 'turisgo',
-    font: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fonts: {
+      title: '"Playfair Display", Georgia, serif',
+      subtitle: '"DM Sans", system-ui, sans-serif',
+      description: '"DM Sans", system-ui, sans-serif',
+    },
   }),
 )
+if (!preferences.value.fonts) {
+  const legacyFont = preferences.value.font || '"DM Sans", system-ui, sans-serif'
+  preferences.value = { ...preferences.value, fonts: { title: legacyFont, subtitle: legacyFont, description: legacyFont } }
+  writeStorage(STORAGE_KEYS.preferences, preferences.value)
+}
 const preferencesDefaults = { ...preferences.value }
 const customThemes = ref(readStorage(STORAGE_KEYS.themes, []))
 const storedCustomFonts = readStorage(STORAGE_KEYS.fonts, [])
@@ -519,6 +521,12 @@ const paletteFields = [
   { key: 'accent', es: 'Color principal', en: 'Accent color' },
   { key: 'highlight', es: 'Color destacado', en: 'Highlight color' },
 ]
+const fontRoles = [
+  { key: 'title', es: 'Títulos', en: 'Titles', sample: 'Aa' },
+  { key: 'subtitle', es: 'Subtítulos', en: 'Subtitles', sample: 'Aa Bb' },
+  { key: 'description', es: 'Descripciones', en: 'Descriptions', sample: 'Aa Bb Cc' },
+]
+const customFontRole = ref('title')
 const checkingVisit = ref(false)
 const savingBusiness = ref(false)
 const avatarLoadFailed = ref(false)
@@ -583,6 +591,7 @@ const themeOptions = [
   { value: 'sunset', es: 'Atardecer', en: 'Sunset', colors: ['#04223a', '#fb5d2e', '#fbc056'] },
 ]
 const builtInFontOptions = [
+  { value: '"Playfair Display", Georgia, serif', es: 'Playfair Display', en: 'Playfair Display', sample: 'Aa' },
   {
     value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     es: 'Sistema',
@@ -617,7 +626,9 @@ const appAppearanceStyle = computed(() => {
   const rgb = colors?.[0]?.match(/[\da-f]{2}/gi)?.slice(0, 3).map((part) => parseInt(part, 16))
   const lightBackground = rgb?.length === 3 && (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) > 150
   return {
-    fontFamily: preferences.value.font,
+    '--font-title': preferences.value.fonts.title,
+    '--font-subtitle': preferences.value.fonts.subtitle,
+    '--font-description': preferences.value.fonts.description,
     ...(colors ? { colorScheme: lightBackground ? 'light' : 'dark' } : {}),
     ...(colors ? {
       '--app-bg': colors[0],
@@ -951,9 +962,10 @@ function selectTheme(theme) {
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
 }
 
-function selectFont(font) {
-  settingsDraft.value = { ...settingsDraft.value, font }
-  preferences.value = { ...preferences.value, font }
+function selectFont(role, font) {
+  const fonts = { ...settingsDraft.value.fonts, [role]: font }
+  settingsDraft.value = { ...settingsDraft.value, fonts }
+  preferences.value = { ...preferences.value, fonts }
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
 }
 
@@ -996,7 +1008,8 @@ function deleteCustomTheme(themeId) {
   $q.notify({ type: 'positive', message: isEnglish.value ? 'Palette deleted.' : 'Paleta eliminada.' })
 }
 
-function openCustomFontEditor() {
+function openCustomFontEditor(role = 'title') {
+  customFontRole.value = role
   customFontDraft.value = { catalogId: '', name: '', family: '' }
   customFontEditorOpen.value = true
 }
@@ -1023,9 +1036,7 @@ function saveCustomFont() {
   const withoutDuplicate = customFonts.value.filter((item) => item.name.toLowerCase() !== name.toLowerCase())
   customFonts.value = [...withoutDuplicate, font]
   writeStorage(STORAGE_KEYS.fonts, customFonts.value)
-  settingsDraft.value = { ...settingsDraft.value, font: family }
-  preferences.value = { ...preferences.value, font: family }
-  writeStorage(STORAGE_KEYS.preferences, preferences.value)
+  selectFont(customFontRole.value, family)
   cancelCustomFont()
   $q.notify({ type: 'positive', message: isEnglish.value ? 'Typeface saved and applied.' : 'Tipografía guardada y aplicada.' })
 }
@@ -1034,12 +1045,13 @@ function deleteCustomFont(fontFamily) {
   if (fontOptions.value.length <= 1) return
   customFonts.value = customFonts.value.filter((font) => font.value !== fontFamily)
   writeStorage(STORAGE_KEYS.fonts, customFonts.value)
-  const fallbackFont = builtInFontOptions[0].value
-  if (preferences.value.font === fontFamily) {
-    preferences.value = { ...preferences.value, font: fallbackFont }
+  const fallbackFont = '"DM Sans", system-ui, sans-serif'
+  const fonts = Object.fromEntries(Object.entries(preferences.value.fonts).map(([role, value]) => [role, value === fontFamily ? fallbackFont : value]))
+  if (Object.keys(fonts).some((role) => fonts[role] !== preferences.value.fonts[role])) {
+    preferences.value = { ...preferences.value, fonts }
     writeStorage(STORAGE_KEYS.preferences, preferences.value)
   }
-  if (settingsDraft.value.font === fontFamily) settingsDraft.value = { ...settingsDraft.value, font: preferences.value.font }
+  settingsDraft.value = { ...settingsDraft.value, fonts: { ...preferences.value.fonts } }
   $q.notify({ type: 'positive', message: isEnglish.value ? 'Typeface deleted.' : 'Tipografía eliminada.' })
 }
 
