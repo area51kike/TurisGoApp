@@ -21,7 +21,13 @@
     <div v-if="!activePerson" class="people-list">
       <button v-for="person in matches" :key="person.username" class="person-result" @click="activePerson = person">
         <q-avatar color="secondary" text-color="white" size="48px">{{ initials(person.name) }}</q-avatar>
-        <span><strong>{{ person.name }}</strong><small>@{{ person.username }} · {{ person.mode === 'business' ? (isEnglish ? 'Business' : 'Empresa') : (isEnglish ? 'Traveler' : 'Viajero') }}</small></span>
+        <span class="person-result__identity">
+          <strong>{{ person.name }}</strong>
+          <small>@{{ person.username }} · {{ person.mode === 'business' ? (isEnglish ? 'Business' : 'Empresa') : (isEnglish ? 'Traveler' : 'Viajero') }}</small>
+          <small :class="['presence-state', { 'presence-state--online': isPersonOnline(person) }]">
+            <i class="presence-state__dot" />{{ presenceLabel(person) }}
+          </small>
+        </span>
         <q-icon name="chevron_right" />
       </button>
       <div v-if="matches.length === 0" class="empty-state"><q-icon name="person_search" /><strong>{{ isEnglish ? 'No travelers found' : 'No encontramos viajeros' }}</strong><span>{{ isEnglish ? 'Try searching for another username.' : 'Prueba con otro nombre de usuario.' }}</span></div>
@@ -29,7 +35,17 @@
     </div>
 
     <div v-else class="chat-room">
-      <div class="chat-room__header"><q-btn flat round icon="arrow_back" @click="activePerson = null" /><q-avatar color="secondary" text-color="white" size="40px">{{ initials(activePerson.name) }}</q-avatar><div><strong>{{ activePerson.name }}</strong><small>@{{ activePerson.username }}</small></div></div>
+      <div class="chat-room__header">
+        <q-btn flat round icon="arrow_back" @click="activePerson = null" />
+        <q-avatar color="secondary" text-color="white" size="40px">{{ initials(activePerson.name) }}</q-avatar>
+        <div class="chat-room__identity">
+          <strong>{{ activePerson.name }}</strong>
+          <small>@{{ activePerson.username }}</small>
+          <small :class="['presence-state', { 'presence-state--online': isPersonOnline(activePerson) }]">
+            <i class="presence-state__dot" />{{ presenceLabel(activePerson) }}
+          </small>
+        </div>
+      </div>
       <div class="chat-messages" ref="messagesElement">
         <div v-if="chatMessages.length === 0" class="chat-empty"><q-icon name="waving_hand" /><p>{{ isEnglish ? `Say hello to ${activePerson.name}.` : `Saluda a ${activePerson.name}.` }}</p></div>
         <div v-for="message in chatMessages" :key="message.id" :class="['chat-bubble', { 'chat-bubble--mine': message.senderUid === currentUser.uid }]">
@@ -51,7 +67,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ensureConversation, watchMessages } from '../services/accountRepository'
 
 const props = defineProps({
@@ -68,12 +84,17 @@ const messagesElement = ref(null)
 const chatMessages = ref([])
 const messageError = ref('')
 const retryCount = ref(0)
+const presenceClock = ref(Date.now())
 let stopMessages
 let subscriptionId = 0
+let presenceTimer
 
 const matches = computed(() => {
   const term = query.value.trim().replace(/^@/, '').toLocaleLowerCase()
   return props.people.filter((person) => !term || `${person.name} ${person.username} ${person.city}`.toLocaleLowerCase().includes(term))
+})
+onMounted(() => {
+  presenceTimer = window.setInterval(() => { presenceClock.value = Date.now() }, 15000)
 })
 watch(() => [activePerson.value?.uid, props.currentUser.uid, retryCount.value], ([otherUid, currentUid]) => {
   const currentSubscriptionId = ++subscriptionId
@@ -109,6 +130,7 @@ watch(() => [activePerson.value?.uid, props.currentUser.uid, retryCount.value], 
 
 onBeforeUnmount(() => {
   subscriptionId += 1
+  window.clearInterval(presenceTimer)
   activePerson.value = null
   stopMessages?.()
 })
@@ -127,6 +149,30 @@ function send() {
 
 function retryMessages() {
   retryCount.value += 1
+}
+
+function lastSeenMillis(person) {
+  const lastSeen = person?.lastSeen
+  if (typeof lastSeen?.toMillis === 'function') return lastSeen.toMillis()
+  if (typeof lastSeen?.seconds === 'number') return lastSeen.seconds * 1000
+  const parsed = Date.parse(lastSeen || '')
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function isPersonOnline(person) {
+  const lastSeen = lastSeenMillis(person)
+  return Boolean(person?.isOnline && lastSeen && presenceClock.value - lastSeen < 120000)
+}
+
+function presenceLabel(person) {
+  if (isPersonOnline(person)) return props.isEnglish ? 'Online' : 'En línea'
+  const lastSeen = lastSeenMillis(person)
+  if (!lastSeen) return props.isEnglish ? 'Offline' : 'Desconectado'
+  const time = new Intl.DateTimeFormat(props.isEnglish ? 'en-US' : 'es-SV', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(lastSeen)
+  return props.isEnglish ? `Last seen ${time}` : `Últ. vez ${time}`
 }
 
 function initials(name = '') {

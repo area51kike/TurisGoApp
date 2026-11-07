@@ -1309,6 +1309,7 @@ button {
   display: grid;
   gap: 4px;
 }
+.person-result__identity { min-width: 0; }
 .person-result strong {
   font-size: 12px;
 }
@@ -1319,6 +1320,10 @@ button {
 .person-result > .q-icon {
   color: var(--text-muted);
 }
+.presence-state { display: inline-flex; align-items: center; gap: 5px; }
+.presence-state__dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #8293a3; }
+.presence-state--online { color: #62d99a !important; }
+.presence-state--online .presence-state__dot { background: #39c879; box-shadow: 0 0 0 3px rgba(57, 200, 121, .14); }
 .chat-note {
   display: flex;
   gap: 6px;
@@ -1352,6 +1357,8 @@ button {
   padding: 10px;
   border-bottom: 1px solid var(--line);
 }
+.chat-room__identity { display: grid; gap: 2px; }
+.chat-room__identity .presence-state { font-size: 9px; }
 .chat-room__header > div {
   display: grid;
   gap: 3px;

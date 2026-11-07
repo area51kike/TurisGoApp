@@ -172,6 +172,35 @@ export function watchTravelers(currentUid, onChange, onError) {
   return unsubscribe
 }
 
+export function startUserPresence(uid, username) {
+  if (!uid || !username || auth.currentUser?.uid !== uid) return () => Promise.resolve()
+
+  const profileRef = doc(db, 'userProfiles', username)
+  let stopped = false
+  const writePresence = (isOnline) => setDoc(profileRef, {
+    uid,
+    username,
+    isOnline,
+    lastSeen: serverTimestamp(),
+  }, { merge: true })
+
+  const heartbeat = () => {
+    if (stopped || auth.currentUser?.uid !== uid) return
+    writePresence(true).catch((error) => console.warn('Could not update online presence:', error))
+  }
+
+  heartbeat()
+  const intervalId = window.setInterval(heartbeat, 30000)
+  return async () => {
+    if (stopped) return
+    stopped = true
+    window.clearInterval(intervalId)
+    if (auth.currentUser?.uid === uid) {
+      await writePresence(false).catch((error) => console.warn('Could not clear online presence:', error))
+    }
+  }
+}
+
 export function getConversationId(firstUid, secondUid) {
   return [firstUid, secondUid].sort().join('_')
 }

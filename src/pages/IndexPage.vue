@@ -393,6 +393,7 @@ import {
   sendChatMessage,
   saveBusinessReply,
   savePlaceReview,
+  startUserPresence,
   updateAccountProfile,
   watchAuthentication,
   watchIncomingMessages,
@@ -726,6 +727,7 @@ const people = ref([])
 let stopPeopleWatch
 let stopIncomingMessageWatch
 let stopAuthWatch
+let stopPresence
 let stopReviewWatch
 let stopBusinessReplyWatch
 let stopBusinessReviewWatch
@@ -751,6 +753,8 @@ watch(selectedPlace, (place) => {
 
 onMounted(async () => {
   stopAuthWatch = watchAuthentication(async (user) => {
+    stopPresence?.()
+    stopPresence = undefined
     stopPeopleWatch?.()
     stopPeopleWatch = undefined
     stopIncomingMessageWatch?.()
@@ -770,6 +774,7 @@ onMounted(async () => {
       if (profile) {
         userProfile.value = { ...userProfile.value, ...profile }
         writeStorage(STORAGE_KEYS.profile, userProfile.value)
+        stopPresence = startUserPresence(user.uid, profile.username)
         stopPeopleWatch = watchTravelers(user.uid, (travelers) => {
           people.value = travelers
         }, (error) => console.warn('Could not load travelers:', error))
@@ -792,6 +797,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   stopAuthWatch?.()
+  void stopPresence?.()
   stopPeopleWatch?.()
   stopIncomingMessageWatch?.()
   stopReviewWatch?.()
@@ -1097,6 +1103,8 @@ async function login(credentials) {
 }
 
 async function logout() {
+  await stopPresence?.()
+  stopPresence = undefined
   await logoutAccount()
   isAuthenticated.value = false
   showProfilePhotoStep.value = false
@@ -1105,6 +1113,8 @@ async function logout() {
 }
 
 async function switchAccount() {
+  await stopPresence?.()
+  stopPresence = undefined
   await logoutAccount()
   isAuthenticated.value = false
   showProfilePhotoStep.value = false
