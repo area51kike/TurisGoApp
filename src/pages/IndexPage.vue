@@ -37,6 +37,12 @@
     </header>
 
     <main class="screen-content" :class="{ 'screen-content--home': currentScreen === 'home' }">
+      <div v-if="!isOnline" class="offline-message-state" role="alert">
+        <span class="offline-message-state__icon" aria-hidden="true">!</span>
+        <h2>{{ isEnglish ? 'No internet connection' : 'Sin conexión a Internet' }}</h2>
+        <p>{{ isEnglish ? 'Check your internet connection to use TURISGO, then try again.' : 'Revisa tu conexión a Internet para usar TURISGO e inténtalo de nuevo.' }}</p>
+      </div>
+      <template v-else>
       <InicioSection
         v-if="currentScreen === 'home'"
         :is-english="isEnglish"
@@ -142,6 +148,7 @@
         @save-profile="saveBusinessProfile"
         @reply-review="replyToReview"
       />
+      </template>
     </main>
 
     <nav
@@ -505,6 +512,7 @@ const businessReplies = ref(readStorage(STORAGE_KEYS.replies, {}))
 const isEnglish = ref(readStorage(STORAGE_KEYS.language, false))
 const showTutorial = ref(!readStorage(STORAGE_KEYS.tutorial, false))
 const currentTutorialStep = ref(0)
+const isOnline = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
 const currentScreen = ref('home')
 const selectedNav = ref('home')
 const searchQuery = ref('')
@@ -786,6 +794,9 @@ watch(selectedPlace, (place) => {
 })
 
 onMounted(async () => {
+  isOnline.value = navigator.onLine
+  window.addEventListener('online', updateOnlineStatus)
+  window.addEventListener('offline', updateOnlineStatus)
   stopAuthWatch = watchAuthentication(async (user) => {
     stopPresence?.()
     stopPresence = undefined
@@ -830,6 +841,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('online', updateOnlineStatus)
+  window.removeEventListener('offline', updateOnlineStatus)
   stopAuthWatch?.()
   void stopPresence?.()
   stopPeopleWatch?.()
@@ -838,6 +851,10 @@ onBeforeUnmount(() => {
   stopBusinessReplyWatch?.()
   stopBusinessReviewWatch?.()
 })
+
+function updateOnlineStatus() {
+  isOnline.value = navigator.onLine
+}
 
 function navigateTo(screen) {
   if (screen === 'messages' && !isAuthenticated.value) {
@@ -1328,13 +1345,13 @@ async function submitReview(review) {
     navigateTo('account')
     return
   }
-  if (!selectedPlace.value || !visitProofs.value[selectedPlace.value.id]) {
+  if (!selectedPlace.value) {
     review.onComplete?.(false)
     $q.notify({
       type: 'negative',
       message: isEnglish.value
-        ? 'Verify your visit before reviewing.'
-        : 'Verifica tu visita antes de publicar una reseña.',
+        ? 'Choose a place before publishing a review.'
+        : 'Selecciona un lugar antes de publicar una reseña.',
     })
     return
   }
@@ -1347,7 +1364,7 @@ async function submitReview(review) {
     date: new Intl.DateTimeFormat(isEnglish.value ? 'en-US' : 'es-SV', {
       dateStyle: 'medium',
     }).format(new Date()),
-    verifiedAt: visitProofs.value[selectedPlace.value.id],
+    verifiedAt: visitProofs.value[selectedPlace.value.id] || '',
     sample: false,
   }
   try {

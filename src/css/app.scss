@@ -682,6 +682,30 @@ button {
   background: var(--app-bg);
   color: var(--text-primary);
 }
+.offline-message-state__icon {
+  display: grid;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f2b84b;
+  color: #08243a;
+  font-size: 17px;
+  font-weight: 800;
+}
+.offline-message-state {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 55vh;
+  padding: 28px 22px;
+  text-align: center;
+}
+.offline-message-state__icon { width: 48px; height: 48px; font-size: 24px; }
+.offline-message-state h2 { margin: 0; font-size: 20px; }
+.offline-message-state p { max-width: 320px; margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .detail-topbar {
   min-height: 54px;
   flex: none;
@@ -967,6 +991,19 @@ button {
   font-size: 10px;
   font-weight: 650;
 }
+.review-location-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.review-location-note .q-icon { color: var(--accent); }
 .review-form {
   display: grid;
   justify-items: start;

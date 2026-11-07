@@ -4,19 +4,14 @@
       <div><span class="eyebrow">{{ isEnglish ? 'TRAVELERS’ EXPERIENCES' : 'EXPERIENCIAS DE VIAJEROS' }}</span><h2>{{ isEnglish ? 'Reviews' : 'Reseñas' }}</h2></div>
       <div v-if="rating" class="reviews-score"><q-icon name="star" /> {{ rating.toFixed(1) }}<small>/5</small></div>
     </div>
-    <div v-if="!visited" class="visit-gate">
-      <div class="visit-gate__icon"><q-icon name="verified_user" /></div>
-      <div><strong>{{ isEnglish ? 'Visited this place?' : '¿Ya visitaste este lugar?' }}</strong><p>{{ isEnglish ? 'Confirm your location near the place to unlock the review form.' : 'Confirma que estás cerca del lugar para habilitar el formulario de reseña.' }}</p></div>
-      <q-btn outline rounded color="primary" :loading="checkingVisit" :label="isEnglish ? 'Verify visit' : 'Validar visita'" @click="$emit('verify-visit')" />
-    </div>
-    <div v-else class="verified-banner"><q-icon name="verified" /> {{ isEnglish ? 'Visit verified. You can leave a review.' : 'Visita verificada. Ya puedes dejar una reseña.' }}</div>
-
-    <div v-if="visited && !isAuthenticated" class="visit-gate">
+    <div v-if="visited" class="verified-banner"><q-icon name="verified" /> {{ isEnglish ? 'Visit verified.' : 'Visita verificada.' }}</div>
+    <div v-else class="review-location-note"><q-icon name="rate_review" /> {{ isEnglish ? 'You can leave a review without sharing your location.' : 'Puedes dejar una reseña sin compartir tu ubicación.' }}</div>
+    <div v-if="!isAuthenticated" class="visit-gate">
       <div class="visit-gate__icon"><q-icon name="login" /></div>
-      <div><strong>{{ isEnglish ? 'Sign in to publish a review' : 'Inicia sesión para publicar una reseña' }}</strong><p>{{ isEnglish ? 'Your verified review will be connected to your traveler account.' : 'Tu reseña verificada quedará vinculada a tu cuenta de viajero.' }}</p></div>
+      <div><strong>{{ isEnglish ? 'Sign in to publish a review' : 'Inicia sesión para publicar una reseña' }}</strong><p>{{ isEnglish ? 'Your review will be connected to your traveler account.' : 'Tu reseña quedará vinculada a tu cuenta de viajero.' }}</p></div>
       <q-btn outline rounded color="primary" :label="isEnglish ? 'Sign in' : 'Iniciar sesión'" @click="$emit('request-account')" />
     </div>
-    <form v-if="visited && isAuthenticated" class="review-form" @submit.prevent="submitReview">
+    <form v-else class="review-form" @submit.prevent="submitReview">
       <label class="review-label">{{ isEnglish ? 'Your rating' : 'Tu puntuación' }}</label>
       <q-rating v-model="score" size="30px" color="amber-8" icon="star_border" icon-selected="star" />
       <q-input v-model="text" outlined rounded autogrow :placeholder="isEnglish ? 'Share a helpful tip or experience…' : 'Comparte un consejo o tu experiencia…'" />
@@ -30,7 +25,7 @@
         <span v-if="review.sample" class="sample-tag">{{ isEnglish ? 'SAMPLE' : 'MUESTRA' }}</span>
       </article>
     </div>
-    <div v-else class="review-empty"><q-icon name="rate_review" /><span>{{ isEnglish ? 'No reviews yet. Your verified visit can start the conversation.' : 'Aún no hay reseñas. Tu visita verificada puede iniciar la conversación.' }}</span></div>
+    <div v-else class="review-empty"><q-icon name="rate_review" /><span>{{ isEnglish ? 'No reviews yet. Be the first to share your experience.' : 'Aún no hay reseñas. Sé la primera persona en compartir su experiencia.' }}</span></div>
   </section>
 </template>
 
@@ -51,7 +46,7 @@ const text = ref('')
 const submitting = ref(false)
 
 function submitReview() {
-  if (!props.visited || !props.isAuthenticated || !score.value || !text.value.trim() || submitting.value) return
+  if (!props.isAuthenticated || !score.value || !text.value.trim() || submitting.value) return
   submitting.value = true
   emit('submit-review', {
     rating: score.value,
