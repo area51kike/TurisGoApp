@@ -201,13 +201,74 @@ export async function updateAccountProfile(profile) {
 }
 
 export function watchTravelers(currentUid, onChange, onError) {
-  const unsubscribe = onSnapshot(collection(db, 'userProfiles'), (snapshot) => {
+  const unsubscribe = onSnapshot(collection(db, 'userProfiles'), { includeMetadataChanges: true }, (snapshot) => {
+    // Do not surface deleted test accounts from Firestore's local cache while
+    // the server snapshot is still pending.
+    if (snapshot.metadata.fromCache) return
     onChange(snapshot.docs
       .map((entry) => ({ id: entry.id, ...entry.data() }))
       // Legacy/test profiles without an Auth uid cannot be used as chat accounts.
       .filter((user) => user.uid && user.uid !== currentUid))
   }, onError)
   return unsubscribe
+}
+
+export function watchChatContacts(currentUid, onChange, onError) {
+  const conversationsQuery = query(
+    collection(db, 'chats'),
+    where('participants', 'array-contains', currentUid),
+  )
+  const messageWatchers = new Map()
+  const conversationPeers = new Map()
+  const conversationsWithMessages = new Set()
+  let conversationsReady = false
+
+  const publishContacts = () => {
+    if (!conversationsReady) return
+    onChange([...conversationsWithMessages])
+  }
+
+  const stopConversations = onSnapshot(conversationsQuery, { includeMetadataChanges: true }, (snapshot) => {
+    if (snapshot.metadata.fromCache) return
+    conversationsReady = true
+    const activeIds = new Set(snapshot.docs.map((entry) => entry.id))
+
+    for (const [conversationId, unsubscribe] of messageWatchers) {
+      if (!activeIds.has(conversationId)) {
+        unsubscribe()
+        messageWatchers.delete(conversationId)
+        conversationsWithMessages.delete(conversationPeers.get(conversationId))
+        conversationPeers.delete(conversationId)
+      }
+    }
+
+    for (const conversation of snapshot.docs) {
+      if (messageWatchers.has(conversation.id)) continue
+      const messageQuery = query(
+        collection(db, 'chats', conversation.id, 'messages'),
+        orderBy('createdAt', 'desc'),
+        limit(1),
+      )
+      const otherUid = (conversation.data().participants || []).find((uid) => uid !== currentUid)
+      conversationPeers.set(conversation.id, otherUid)
+      const stopMessages = onSnapshot(messageQuery, { includeMetadataChanges: true }, (messagesSnapshot) => {
+        if (messagesSnapshot.metadata.fromCache) return
+        if (otherUid && !messagesSnapshot.empty) conversationsWithMessages.add(otherUid)
+        else if (otherUid) conversationsWithMessages.delete(otherUid)
+        publishContacts()
+      }, onError)
+      messageWatchers.set(conversation.id, stopMessages)
+    }
+    publishContacts()
+  }, onError)
+
+  return () => {
+    stopConversations()
+    messageWatchers.forEach((unsubscribe) => unsubscribe())
+    messageWatchers.clear()
+    conversationPeers.clear()
+    conversationsWithMessages.clear()
+  }
 }
 
 export function startUserPresence(uid, username) {

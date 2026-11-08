@@ -134,6 +134,7 @@
         v-else-if="currentScreen === 'messages'"
         :is-english="isEnglish"
         :people="people"
+        :contact-uids="chatContactUids"
         :current-user="userProfile"
         :is-authenticated="isAuthenticated"
         @send-message="sendMessage"
@@ -405,6 +406,7 @@ import {
   updateAccountProfile,
   watchAuthentication,
   watchIncomingMessages,
+  watchChatContacts,
   watchBusinessReplies,
   watchPlaceReviews,
   watchTravelers,
@@ -768,7 +770,9 @@ const ownedBusinessProfiles = computed(() => {
 const accountLoading = ref(false)
 const accountError = ref('')
 const people = ref([])
+const chatContactUids = ref([])
 let stopPeopleWatch
+let stopChatContactsWatch
 let stopIncomingMessageWatch
 let stopAuthWatch
 let stopPresence
@@ -809,6 +813,8 @@ onMounted(async () => {
     stopPresence = undefined
     stopPeopleWatch?.()
     stopPeopleWatch = undefined
+    stopChatContactsWatch?.()
+    stopChatContactsWatch = undefined
     stopIncomingMessageWatch?.()
     stopIncomingMessageWatch = undefined
     stopBusinessReplyWatch?.()
@@ -818,6 +824,7 @@ onMounted(async () => {
     isAuthenticated.value = Boolean(user)
     if (!user) {
       people.value = []
+      chatContactUids.value = []
       userProfile.value = { uid: '', name: '', username: '', mode: '', businessName: '', phone: '', email: '', avatarUrl: '' }
       writeStorage(STORAGE_KEYS.profile, userProfile.value)
       return
@@ -836,6 +843,9 @@ onMounted(async () => {
         stopPeopleWatch = watchTravelers(user.uid, (travelers) => {
           people.value = travelers
         }, (error) => console.warn('Could not load travelers:', error))
+        stopChatContactsWatch = watchChatContacts(user.uid, (contactUids) => {
+          chatContactUids.value = contactUids
+        }, (error) => console.warn('Could not load chat contacts:', error))
         stopIncomingMessageWatch = watchIncomingMessages(user.uid, notifyIncomingMessage, (error) => {
           console.warn('Could not watch incoming messages:', error)
         })
@@ -875,6 +885,7 @@ onBeforeUnmount(() => {
   stopAuthWatch?.()
   void stopPresence?.()
   stopPeopleWatch?.()
+  stopChatContactsWatch?.()
   stopIncomingMessageWatch?.()
   stopReviewWatch?.()
   stopBusinessReplyWatch?.()

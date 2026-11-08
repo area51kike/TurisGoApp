@@ -3,7 +3,7 @@
     <header class="page-heading">
       <span class="eyebrow">{{ isEnglish ? 'TRAVEL TOGETHER' : 'VIAJA EN COMPAÑÍA' }}</span>
       <h1>{{ isEnglish ? 'Messages' : 'Chat' }}</h1>
-      <p>{{ isEnglish ? 'Find another traveler by their username.' : 'Encuentra a otros viajeros por su nombre de usuario.' }}</p>
+      <p>{{ isEnglish ? 'Your chats stay here. Search for someone to start a conversation.' : 'Tus conversaciones quedan aquí. Busca a alguien para iniciar un chat.' }}</p>
     </header>
 
     <div v-if="!isAuthenticated" class="account-card">
@@ -19,7 +19,7 @@
     </q-input>
 
     <div v-if="!activePerson" class="people-list">
-      <button v-for="person in matches" :key="person.username" class="person-result" @click="activePerson = person">
+      <button v-for="person in displayedPeople" :key="person.uid" class="person-result" @click="activePerson = person">
         <q-avatar color="secondary" text-color="white" size="48px">{{ initials(person.name) }}</q-avatar>
         <span class="person-result__identity">
           <strong>{{ person.name }}</strong>
@@ -30,8 +30,11 @@
         </span>
         <q-icon name="chevron_right" />
       </button>
-      <div v-if="matches.length === 0" class="empty-state"><q-icon name="person_search" /><strong>{{ isEnglish ? 'No travelers found' : 'No encontramos viajeros' }}</strong><span>{{ isEnglish ? 'Try searching for another username.' : 'Prueba con otro nombre de usuario.' }}</span></div>
-      <div v-if="!query && matches.length" class="chat-note"><q-icon name="verified_user" /> {{ isEnglish ? 'These are registered TURISGO accounts.' : 'Estas son cuentas TURISGO registradas.' }}</div>
+      <div v-if="displayedPeople.length === 0" class="empty-state">
+        <q-icon :name="query.trim() ? 'person_search' : 'forum'" />
+        <strong>{{ emptyHeading }}</strong>
+        <span>{{ emptyDescription }}</span>
+      </div>
     </div>
 
     <div v-else class="chat-room">
@@ -73,6 +76,7 @@ import { ensureConversation, watchMessages } from '../services/accountRepository
 const props = defineProps({
   isEnglish: Boolean,
   people: { type: Array, default: () => [] },
+  contactUids: { type: Array, default: () => [] },
   currentUser: { type: Object, default: () => ({}) },
   isAuthenticated: Boolean,
 })
@@ -89,9 +93,21 @@ let stopMessages
 let subscriptionId = 0
 let presenceTimer
 
-const matches = computed(() => {
+const displayedPeople = computed(() => {
   const term = query.value.trim().replace(/^@/, '').toLocaleLowerCase()
-  return props.people.filter((person) => !term || `${person.name} ${person.username} ${person.city}`.toLocaleLowerCase().includes(term))
+  if (!term) {
+    const contacts = new Set(props.contactUids)
+    return props.people.filter((person) => contacts.has(person.uid))
+  }
+  return props.people.filter((person) => `${person.name} ${person.username} ${person.city}`.toLocaleLowerCase().includes(term))
+})
+const emptyHeading = computed(() => {
+  if (query.value.trim()) return props.isEnglish ? 'No travelers found' : 'No encontramos usuarios'
+  return props.isEnglish ? 'No conversations yet' : 'Aún no tienes conversaciones'
+})
+const emptyDescription = computed(() => {
+  if (query.value.trim()) return props.isEnglish ? 'Try another name or username.' : 'Prueba con otro nombre o usuario.'
+  return props.isEnglish ? 'Search by username to say hello. Your chat will appear here after you send a message.' : 'Busca a alguien por su usuario y salúdalo. El chat aparecerá aquí cuando envíes un mensaje.'
 })
 onMounted(() => {
   presenceTimer = window.setInterval(() => { presenceClock.value = Date.now() }, 15000)
