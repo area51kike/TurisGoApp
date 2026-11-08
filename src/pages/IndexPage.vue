@@ -804,6 +804,7 @@ onMounted(async () => {
   document.addEventListener('visibilitychange', checkInternetConnection)
   connectionCheckTimer = window.setInterval(checkInternetConnection, 15000)
   stopAuthWatch = watchAuthentication(async (user) => {
+    const registrationInProgress = pendingAccountRegistration
     stopPresence?.()
     stopPresence = undefined
     stopPeopleWatch?.()
@@ -849,6 +850,13 @@ onMounted(async () => {
       }
     } catch (error) {
       accountError.value = accountErrorText(error)
+    } finally {
+      // Keep the registration promise available until this Auth callback has
+      // finished; otherwise the account can be signed out during its first
+      // Firestore profile write.
+      if (registrationInProgress && pendingAccountRegistration === registrationInProgress) {
+        pendingAccountRegistration = null
+      }
     }
   })
   try {
@@ -1194,7 +1202,7 @@ async function register(form) {
     accountError.value = accountErrorText(error)
     await logoutAccount().catch(() => {})
   } finally {
-    if (pendingAccountRegistration === registration) pendingAccountRegistration = null
+    if (pendingAccountRegistration === registration && accountError.value) pendingAccountRegistration = null
     accountLoading.value = false
   }
 }

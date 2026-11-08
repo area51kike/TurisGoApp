@@ -46,39 +46,77 @@ export async function registerAccount(form) {
     error.code = 'username-invalid'
     throw error
   }
-  const credential = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password)
+  let credential
+  try {
+    credential = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password)
+  } catch (error) {
+    // A previous interrupted registration can leave an Auth user without its
+    // Firestore profile. Let its owner finish setup by proving the password.
+    if (error.code !== 'auth/email-already-in-use') throw error
+    try {
+      credential = await signInWithEmailAndPassword(auth, form.email.trim(), form.password)
+    } catch {
+      throw error
+    }
+    const existingProfile = await getDocs(query(
+      collection(db, 'userProfiles'),
+      where('uid', '==', credential.user.uid),
+      limit(1),
+    ))
+    if (!existingProfile.empty) throw error
+    try {
+      await writeNewAccountProfile(credential.user.uid, form, username, phone)
+    } catch (profileError) {
+      await signOut(auth).catch(() => {})
+      throw profileError
+    }
+    return {
+      uid: credential.user.uid,
+      username,
+      name: form.name.trim(),
+      mode: form.mode,
+      businessName: form.businessName?.trim() || '',
+      phone,
+      email: form.email.trim().toLowerCase(),
+      avatarUrl: '',
+    }
+  }
   const uid = credential.user.uid
 
   try {
-    await runTransaction(db, async (transaction) => {
-      // userProfiles is keyed by the public username in the existing project.
-      const profileRef = doc(db, 'userProfiles', username)
-      const profileSnapshot = await transaction.get(profileRef)
-      if (profileSnapshot.exists()) {
-        const error = new Error('username-already-used')
-        error.code = 'username-already-used'
-        throw error
-      }
-      transaction.set(profileRef, {
-        uid,
-        username,
-        name: form.name.trim(),
-        mode: form.mode,
-        avatarUrl: '',
-        updatedAt: serverTimestamp(),
-      })
-      transaction.set(doc(db, 'accounts', uid), {
-        email: form.email.trim().toLowerCase(),
-        phone,
-        createdAt: serverTimestamp(),
-      })
-    })
+    await writeNewAccountProfile(uid, form, username, phone)
   } catch (error) {
     await deleteUser(credential.user).catch(() => {})
     throw error
   }
 
   return { uid, username, name: form.name.trim(), mode: form.mode, businessName: form.businessName?.trim() || '', phone, email: form.email.trim().toLowerCase(), avatarUrl: '' }
+}
+
+async function writeNewAccountProfile(uid, form, username, phone) {
+  await runTransaction(db, async (transaction) => {
+    // userProfiles is keyed by the public username in the existing project.
+    const profileRef = doc(db, 'userProfiles', username)
+    const profileSnapshot = await transaction.get(profileRef)
+    if (profileSnapshot.exists()) {
+      const error = new Error('username-already-used')
+      error.code = 'username-already-used'
+      throw error
+    }
+    transaction.set(profileRef, {
+      uid,
+      username,
+      name: form.name.trim(),
+      mode: form.mode,
+      avatarUrl: '',
+      updatedAt: serverTimestamp(),
+    })
+    transaction.set(doc(db, 'accounts', uid), {
+      email: form.email.trim().toLowerCase(),
+      phone,
+      createdAt: serverTimestamp(),
+    }, { merge: true })
+  })
 }
 
 export async function loginAccount(email, password) {
