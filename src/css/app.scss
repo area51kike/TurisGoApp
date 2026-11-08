@@ -2165,6 +2165,18 @@ button {
 .commission-note .q-icon { color: var(--gold); }
 .q-menu { background: var(--surface) !important; color: var(--text-primary) !important; }
 .q-menu .q-item { color: var(--text-primary); }
+.account-type-options {
+  background: #0b2948 !important;
+  color: #fff !important;
+  border: 1px solid rgba(0, 145, 224, 0.65);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+}
+.account-type-options .q-item,
+.account-type-options .q-item__label { color: #fff !important; }
+.account-type-options .q-item { min-height: 48px; }
+.account-type-options .q-item--active,
+.account-type-options .q-item:hover { background: rgba(0, 145, 224, 0.3); }
 .business-type-options {
   border: 1px solid rgba(0, 145, 224, 0.55);
   border-radius: 14px;
