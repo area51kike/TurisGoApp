@@ -775,6 +775,7 @@ let stopPresence
 let stopReviewWatch
 let stopBusinessReplyWatch
 let stopBusinessReviewWatch
+let pendingAccountRegistration = null
 
 watch(
   preferences,
@@ -821,7 +822,12 @@ onMounted(async () => {
       return
     }
     try {
-      const profile = await loadAccountProfile(user.uid)
+      let profile = await loadAccountProfile(user.uid)
+      if (!profile && pendingAccountRegistration) {
+        const registrationSucceeded = await pendingAccountRegistration.then(() => true, () => false)
+        if (!registrationSucceeded) return
+        profile = await loadAccountProfile(user.uid)
+      }
       if (profile) {
         userProfile.value = { ...userProfile.value, ...profile }
         writeStorage(STORAGE_KEYS.profile, userProfile.value)
@@ -1147,33 +1153,37 @@ function deleteCustomFont(fontFamily) {
 function accountErrorText(error) {
   const code = error?.code || error?.message
   const messages = {
-    'auth/email-already-in-use': 'Ese correo ya está registrado. Inicia sesión.',
+    'auth/email-already-in-use': 'Este correo ya tiene una cuenta. Inicia sesión o usa otro correo.',
     'auth/invalid-credential': 'No se pudo iniciar sesión. Si aún no tienes una cuenta, selecciona “Crear cuenta”; si ya tienes una, revisa el correo y la contraseña.',
+    'auth/user-not-found': 'No encontramos una cuenta con ese correo. Si aún no tienes una, selecciona “Crear cuenta”.',
+    'auth/wrong-password': 'La contraseña no coincide. Revísala e inténtalo de nuevo.',
     'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
     'auth/invalid-email': 'Escribe un correo válido.',
-    'auth/unauthorized-domain': 'Firebase bloqueó este dominio. En Authentication > Settings > Authorized domains agrega 127.0.0.1 (y localhost para desarrollo).',
-    'auth/operation-not-allowed': 'Activa el proveedor Correo electrónico/Contraseña en Firebase Authentication > Sign-in method.',
-    'auth/configuration-not-found': 'La configuración de Firebase Authentication no está completa. Verifica que Authentication esté habilitado en el proyecto.',
-    'auth/invalid-api-key': 'La clave de Firebase no es válida. Revisa la configuración del proyecto en src/boot/firebase.js.',
-    'auth/network-request-failed': 'No se pudo conectar con Firebase. Revisa la conexión a internet y vuelve a intentarlo.',
-    'auth/too-many-requests': 'Firebase bloqueó temporalmente los intentos. Espera un momento e inténtalo de nuevo.',
-    'permission-denied': 'Firebase rechazó el guardado del perfil. Publica las reglas actualizadas de Firestore en el proyecto.',
-    'firestore/permission-denied': 'Firebase rechazó el guardado del perfil. Publica las reglas actualizadas de Firestore en el proyecto.',
+    'auth/unauthorized-domain': 'No se pudo completar el registro desde este sitio. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/operation-not-allowed': 'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/configuration-not-found': 'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/invalid-api-key': 'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/network-request-failed': 'No pudimos conectarnos. Revisa tu conexión a Internet e inténtalo de nuevo.',
+    'auth/too-many-requests': 'Por seguridad, espera un momento antes de volver a intentarlo.',
+    'permission-denied': 'No pudimos guardar tu perfil. Inténtalo de nuevo más tarde.',
+    'firestore/permission-denied': 'No pudimos guardar tu perfil. Inténtalo de nuevo más tarde.',
     'username-already-used': 'Ese nombre de usuario ya está ocupado.',
     'username-invalid': 'El usuario debe tener entre 3 y 24 caracteres válidos.',
-    'profile-not-found': 'Esta cuenta aún existe en Firebase Authentication, pero su perfil de TURISGO ya no está en Firestore. Si era una cuenta de prueba, elimínala también en Firebase Console > Authentication > Usuarios antes de registrarla de nuevo.',
+    'profile-not-found': 'No encontramos el perfil de esta cuenta. Inténtalo de nuevo o contacta al equipo de TURISGO.',
     'account-details-required': 'Completa el nombre, teléfono, tipo de cuenta y nombre de empresa si aplica.',
     'phone-invalid': 'Escribe un teléfono de El Salvador con 8 dígitos; puedes incluir +503.',
     'auth-required': 'Inicia sesión para continuar.',
   }
-  return messages[code] || (isEnglish.value ? `Could not complete the account action${code ? ` (Firebase: ${code})` : ''}. Check Firebase Authentication and Firestore rules.` : `No se pudo completar la acción${code ? ` (Firebase: ${code})` : ''}. Revisa Firebase Authentication y las reglas de Firestore.`)
+  return messages[code] || (isEnglish.value ? 'We could not complete this step. Check your details and try again.' : 'No pudimos completar este paso. Revisa tus datos e inténtalo de nuevo.')
 }
 
 async function register(form) {
   accountLoading.value = true
   accountError.value = ''
+  const registration = registerAccount(form)
+  pendingAccountRegistration = registration
   try {
-    const profile = await registerAccount(form)
+    const profile = await registration
     userProfile.value = { ...userProfile.value, ...profile }
     isAuthenticated.value = true
     showProfilePhotoStep.value = true
@@ -1182,7 +1192,9 @@ async function register(form) {
     $q.notify({ type: 'positive', message: isEnglish.value ? 'Account created.' : 'Cuenta creada.' })
   } catch (error) {
     accountError.value = accountErrorText(error)
+    await logoutAccount().catch(() => {})
   } finally {
+    if (pendingAccountRegistration === registration) pendingAccountRegistration = null
     accountLoading.value = false
   }
 }
