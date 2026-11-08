@@ -709,8 +709,6 @@ function mapBusinessPlace(profile) {
 const visiblePlaces = computed(() => {
   const listingsById = new Map()
   for (const profile of cloudBusinessListings.value) listingsById.set(profile.id, profile)
-  if (businessProfile.value.published && businessProfile.value.id)
-    listingsById.set(businessProfile.value.id, businessProfile.value)
   const activeListings = [...listingsById.values()].filter(
     (profile) => profile.published && !isListingUpdateDue(profile) && profile.photoUrls?.length,
   )
@@ -765,9 +763,6 @@ const ownedBusinessProfiles = computed(() => {
       owned.set(profile.id, profile)
     }
   }
-  if (businessProfile.value.id && (businessProfile.value.ownerUid === ownerUid || businessProfile.value.id === usernameId)) {
-    owned.set(businessProfile.value.id, businessProfile.value)
-  }
   return [...owned.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 })
 const accountLoading = ref(false)
@@ -821,7 +816,8 @@ onMounted(async () => {
     isAuthenticated.value = Boolean(user)
     if (!user) {
       people.value = []
-      userProfile.value = { ...userProfile.value, uid: '', email: '' }
+      userProfile.value = { uid: '', name: '', username: '', mode: '', businessName: '', phone: '', email: '', avatarUrl: '' }
+      writeStorage(STORAGE_KEYS.profile, userProfile.value)
       return
     }
     try {
@@ -838,6 +834,12 @@ onMounted(async () => {
         })
         startBusinessReplyWatch()
         startBusinessReviewWatch()
+      } else {
+        isAuthenticated.value = false
+        userProfile.value = { uid: '', name: '', username: '', mode: '', businessName: '', phone: '', email: '', avatarUrl: '' }
+        writeStorage(STORAGE_KEYS.profile, userProfile.value)
+        accountError.value = accountErrorText({ code: 'profile-not-found' })
+        await logoutAccount().catch(() => {})
       }
     } catch (error) {
       accountError.value = accountErrorText(error)
@@ -1146,7 +1148,7 @@ function accountErrorText(error) {
   const code = error?.code || error?.message
   const messages = {
     'auth/email-already-in-use': 'Ese correo ya está registrado. Inicia sesión.',
-    'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+    'auth/invalid-credential': 'No se pudo iniciar sesión. Si aún no tienes una cuenta, selecciona “Crear cuenta”; si ya tienes una, revisa el correo y la contraseña.',
     'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
     'auth/invalid-email': 'Escribe un correo válido.',
     'auth/unauthorized-domain': 'Firebase bloqueó este dominio. En Authentication > Settings > Authorized domains agrega 127.0.0.1 (y localhost para desarrollo).',
@@ -1159,7 +1161,7 @@ function accountErrorText(error) {
     'firestore/permission-denied': 'Firebase rechazó el guardado del perfil. Publica las reglas actualizadas de Firestore en el proyecto.',
     'username-already-used': 'Ese nombre de usuario ya está ocupado.',
     'username-invalid': 'El usuario debe tener entre 3 y 24 caracteres válidos.',
-    'profile-not-found': 'No encontramos el perfil para esta cuenta.',
+    'profile-not-found': 'Esta cuenta aún existe en Firebase Authentication, pero su perfil de TURISGO ya no está en Firestore. Si era una cuenta de prueba, elimínala también en Firebase Console > Authentication > Usuarios antes de registrarla de nuevo.',
     'account-details-required': 'Completa el nombre, teléfono, tipo de cuenta y nombre de empresa si aplica.',
     'phone-invalid': 'Escribe un teléfono de El Salvador con 8 dígitos; puedes incluir +503.',
     'auth-required': 'Inicia sesión para continuar.',
