@@ -6,8 +6,8 @@
         {{ greeting }}<template v-if="firstName">, {{ firstName }}</template>
       </p>
       <h1 class="hm-title">
-        <template v-if="isEnglish">Where to <em>next</em> in El Salvador?</template>
-        <template v-else>¿A dónde vamos <em>hoy</em> en El Salvador?</template>
+        <template v-if="isEnglish">Ready to <em>explore</em> ?</template>
+        <template v-else>¿ Listo para <em>explorar</em> ?</template>
       </h1>
 
       <div class="hm-finder">

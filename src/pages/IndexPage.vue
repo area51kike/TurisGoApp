@@ -2,7 +2,7 @@
   <div class="app-shell" :class="`theme-${preferences.theme}`" :style="appAppearanceStyle">
     <header class="app-topbar">
       <button class="brand-lockup" @click="navigateTo('home')">
-        <span class="brand-mark"><q-icon name="explore" /></span>
+        <span class="brand-mark"><img :src="brandLogo" alt="TurisGo" /></span>
         <span
           ><strong>TURISGO</strong
           ><small>{{ isEnglish ? 'EL SALVADOR' : 'EL SALVADOR' }}</small></span
@@ -51,117 +51,123 @@
       <div v-else-if="!isOnline" class="offline-message-state" role="alert">
         <span class="offline-message-state__icon" aria-hidden="true">!</span>
         <h2>{{ isEnglish ? 'No internet connection' : 'Sin conexión a Internet' }}</h2>
-        <p>{{ isEnglish ? 'Check your internet connection to use TURISGO, then try again.' : 'Revisa tu conexión a Internet para usar TURISGO e inténtalo de nuevo.' }}</p>
+        <p>
+          {{
+            isEnglish
+              ? 'Check your internet connection to use TURISGO, then try again.'
+              : 'Revisa tu conexión a Internet para usar TURISGO e inténtalo de nuevo.'
+          }}
+        </p>
       </div>
       <template v-else>
-      <InicioSection
-        v-if="currentScreen === 'home'"
-        :is-english="isEnglish"
-        :search-query="searchQuery"
-        :user-name="userProfile.name"
-        :places="visiblePlaces"
-        :saved-ids="savedIds"
-        @update:search-query="searchQuery = $event"
-        @open-search="openSearch()"
-        @open-map="navigateTo('map')"
-        @open-category="openCategory"
-        @open-budget="navigateTo('budget')"
-        @select-place="openPlace"
-        @toggle-save="toggleSaved"
-        @remember-place="rememberPlace"
-      />
+        <InicioSection
+          v-if="currentScreen === 'home'"
+          :is-english="isEnglish"
+          :search-query="searchQuery"
+          :user-name="userProfile.name"
+          :places="visiblePlaces"
+          :saved-ids="savedIds"
+          @update:search-query="searchQuery = $event"
+          @open-search="openSearch()"
+          @open-map="navigateTo('map')"
+          @open-category="openCategory"
+          @open-budget="navigateTo('budget')"
+          @select-place="openPlace"
+          @toggle-save="toggleSaved"
+          @remember-place="rememberPlace"
+        />
 
-      <BuscarSection
-        v-else-if="currentScreen === 'search'"
-        :key="`${searchFilter}-${searchQuery}`"
-        :is-english="isEnglish"
-        :places="visiblePlaces"
-        :saved-ids="savedIds"
-        :initial-query="searchQuery"
-        :initial-filter="searchFilter"
-        @select-place="openPlace"
-        @toggle-save="toggleSaved"
-        @remember-place="rememberPlace"
-      />
+        <BuscarSection
+          v-else-if="currentScreen === 'search'"
+          :key="`${searchFilter}-${searchQuery}`"
+          :is-english="isEnglish"
+          :places="visiblePlaces"
+          :saved-ids="savedIds"
+          :initial-query="searchQuery"
+          :initial-filter="searchFilter"
+          @select-place="openPlace"
+          @toggle-save="toggleSaved"
+          @remember-place="rememberPlace"
+        />
 
-      <GuardadosSection
-        v-else-if="currentScreen === 'saved'"
-        :is-english="isEnglish"
-        :places="savedPlaces"
-        @select-place="openPlace"
-        @toggle-save="toggleSaved"
-        @open-search="navigateTo('search')"
-      />
+        <GuardadosSection
+          v-else-if="currentScreen === 'saved'"
+          :is-english="isEnglish"
+          :places="savedPlaces"
+          @select-place="openPlace"
+          @toggle-save="toggleSaved"
+          @open-search="navigateTo('search')"
+        />
 
-      <CuentaSection
-        v-else-if="currentScreen === 'account'"
-        :is-english="isEnglish"
-        :loading="accountLoading"
-        :error-message="accountError"
-        :is-authenticated="isAuthenticated"
-        :user-profile="userProfile"
-        :show-photo-step="showProfilePhotoStep"
-        :has-business-profile="Boolean(businessProfile.name)"
-        :businesses="ownedBusinessProfiles"
-        @login="login"
-        @register="register"
-        @logout="logout"
-        @switch-account="switchAccount"
-        @open-settings="openSettings"
-        @open-business="openBusinessProfile"
-        @add-business="addBusinessProfile"
-        @edit-business="editBusinessProfile"
-        @update-profile="updateAccountDetails"
-        @complete-photo="completeProfilePhoto"
-        @skip-photo="skipProfilePhoto"
-      />
+        <CuentaSection
+          v-else-if="currentScreen === 'account'"
+          :is-english="isEnglish"
+          :loading="accountLoading"
+          :error-message="accountError"
+          :is-authenticated="isAuthenticated"
+          :user-profile="userProfile"
+          :show-photo-step="showProfilePhotoStep"
+          :has-business-profile="Boolean(businessProfile.name)"
+          :businesses="ownedBusinessProfiles"
+          @login="login"
+          @register="register"
+          @logout="logout"
+          @switch-account="switchAccount"
+          @open-settings="openSettings"
+          @open-business="openBusinessProfile"
+          @add-business="addBusinessProfile"
+          @edit-business="editBusinessProfile"
+          @update-profile="updateAccountDetails"
+          @complete-photo="completeProfilePhoto"
+          @skip-photo="skipProfilePhoto"
+        />
 
-      <ExplorarSection
-        v-else-if="currentScreen === 'map'"
-        :is-english="isEnglish"
-        :places="knownPlaces"
-        :selected-map-place="selectedMapPlace"
-        :route-request="routeRequest"
-        @update:selected-map-place="selectedMapPlace = $event"
-        @select-place="openPlace"
-      />
+        <ExplorarSection
+          v-else-if="currentScreen === 'map'"
+          :is-english="isEnglish"
+          :places="knownPlaces"
+          :selected-map-place="selectedMapPlace"
+          :route-request="routeRequest"
+          @update:selected-map-place="selectedMapPlace = $event"
+          @select-place="openPlace"
+        />
 
-      <PresupuestoSection
-        v-else-if="currentScreen === 'budget'"
-        :is-english="isEnglish"
-        :places="knownPlaces"
-        :selected-place-ids="budgetPlaceIds"
-        :costs="budgetCosts"
-        :total-budget="totalBudget"
-        @update:selected-place-ids="updateBudgetPlaceIds"
-        @update:costs="updateBudgetCosts"
-        @open-search="navigateTo('search')"
-      />
+        <PresupuestoSection
+          v-else-if="currentScreen === 'budget'"
+          :is-english="isEnglish"
+          :places="knownPlaces"
+          :selected-place-ids="budgetPlaceIds"
+          :costs="budgetCosts"
+          :total-budget="totalBudget"
+          @update:selected-place-ids="updateBudgetPlaceIds"
+          @update:costs="updateBudgetCosts"
+          @open-search="navigateTo('search')"
+        />
 
-      <MensajesSection
-        v-else-if="currentScreen === 'messages'"
-        :is-english="isEnglish"
-        :people="people"
-        :contact-uids="chatContactUids"
-        :current-user="userProfile"
-        :is-authenticated="isAuthenticated"
-        @send-message="sendMessage"
-        @open-account="navigateTo('account')"
-      />
+        <MensajesSection
+          v-else-if="currentScreen === 'messages'"
+          :is-english="isEnglish"
+          :people="people"
+          :contact-uids="chatContactUids"
+          :current-user="userProfile"
+          :is-authenticated="isAuthenticated"
+          @send-message="sendMessage"
+          @open-account="navigateTo('account')"
+        />
 
-      <EmpresaSection
-        v-else-if="currentScreen === 'business'"
-        :is-english="isEnglish"
-        :profile="businessProfile"
-        :plan-active="premiumPreviewActive"
-        :update-due="businessUpdateDue"
-        :saving="savingBusiness"
-        :customer-reviews="businessReviews"
-        :review-replies="businessReplies"
-        @activate-demo="activatePremiumPreview"
-        @save-profile="saveBusinessProfile"
-        @reply-review="replyToReview"
-      />
+        <EmpresaSection
+          v-else-if="currentScreen === 'business'"
+          :is-english="isEnglish"
+          :profile="businessProfile"
+          :plan-active="premiumPreviewActive"
+          :update-due="businessUpdateDue"
+          :saving="savingBusiness"
+          :customer-reviews="businessReviews"
+          :review-replies="businessReplies"
+          @activate-demo="activatePremiumPreview"
+          @save-profile="saveBusinessProfile"
+          @reply-review="replyToReview"
+        />
       </template>
     </main>
 
@@ -201,10 +207,35 @@
       <q-card class="settings-dialog" :style="appAppearanceStyle">
         <div class="settings-dialog__top">
           <div>
-            <span class="eyebrow">{{ customFontEditorOpen ? (isEnglish ? 'CUSTOM TYPEFACE' : 'TIPOGRAFÍA PERSONALIZADA') : (isEnglish ? 'MAKE IT YOURS' : 'A TU MANERA') }}</span>
-            <h2>{{ customFontEditorOpen ? (isEnglish ? 'Add a typeface' : 'Agregar tipografía') : (isEnglish ? 'Appearance' : 'Personalización') }}</h2>
+            <span class="eyebrow">{{
+              customFontEditorOpen
+                ? isEnglish
+                  ? 'CUSTOM TYPEFACE'
+                  : 'TIPOGRAFÍA PERSONALIZADA'
+                : isEnglish
+                  ? 'MAKE IT YOURS'
+                  : 'A TU MANERA'
+            }}</span>
+            <h2>
+              {{
+                customFontEditorOpen
+                  ? isEnglish
+                    ? 'Add a typeface'
+                    : 'Agregar tipografía'
+                  : isEnglish
+                    ? 'Appearance'
+                    : 'Personalización'
+              }}
+            </h2>
           </div>
-          <q-btn v-if="customFontEditorOpen" flat round icon="arrow_back" :aria-label="isEnglish ? 'Back' : 'Volver'" @click="cancelCustomFont" />
+          <q-btn
+            v-if="customFontEditorOpen"
+            flat
+            round
+            icon="arrow_back"
+            :aria-label="isEnglish ? 'Back' : 'Volver'"
+            @click="cancelCustomFont"
+          />
           <q-btn
             flat
             round
@@ -261,33 +292,49 @@
         </div>
 
         <template v-if="!customFontEditorOpen">
-        <div v-for="role in fontRoles" :key="role.key" class="settings-choice-group">
-          <div class="settings-label">{{ isEnglish ? role.en : role.es }}</div>
-          <div class="font-role-options">
-            <div v-for="font in fontOptions" :key="`${role.key}-${font.value}`" class="appearance-choice-row">
-              <button
-                :class="['font-choice', { selected: settingsDraft.fonts[role.key] === font.value }]"
-                @click="selectFont(role.key, font.value)"
+          <div v-for="role in fontRoles" :key="role.key" class="settings-choice-group">
+            <div class="settings-label">{{ isEnglish ? role.en : role.es }}</div>
+            <div class="font-role-options">
+              <div
+                v-for="font in fontOptions"
+                :key="`${role.key}-${font.value}`"
+                class="appearance-choice-row"
               >
-                <span :style="{ fontFamily: font.value }">{{ role.sample }}</span>
-                <strong>{{ isEnglish ? font.en : font.es }}</strong>
-                <q-icon v-if="settingsDraft.fonts[role.key] === font.value" name="check_circle" />
-              </button>
-              <q-btn v-if="font.name" flat round dense icon="delete" class="appearance-choice-delete"
-                :disable="fontOptions.length <= 1"
-                :aria-label="isEnglish ? `Delete ${font.en} typeface` : `Eliminar fuente ${font.es}`"
-                @click="deleteCustomFont(font.value)" />
+                <button
+                  :class="[
+                    'font-choice',
+                    { selected: settingsDraft.fonts[role.key] === font.value },
+                  ]"
+                  @click="selectFont(role.key, font.value)"
+                >
+                  <span :style="{ fontFamily: font.value }">{{ role.sample }}</span>
+                  <strong>{{ isEnglish ? font.en : font.es }}</strong>
+                  <q-icon v-if="settingsDraft.fonts[role.key] === font.value" name="check_circle" />
+                </button>
+                <q-btn
+                  v-if="font.name"
+                  flat
+                  round
+                  dense
+                  icon="delete"
+                  class="appearance-choice-delete"
+                  :disable="fontOptions.length <= 1"
+                  :aria-label="
+                    isEnglish ? `Delete ${font.en} typeface` : `Eliminar fuente ${font.es}`
+                  "
+                  @click="deleteCustomFont(font.value)"
+                />
+              </div>
             </div>
+            <q-btn
+              outline
+              rounded
+              no-caps
+              icon="add"
+              :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'"
+              @click="openCustomFontEditor(role.key)"
+            />
           </div>
-          <q-btn
-            outline
-            rounded
-            no-caps
-            icon="add"
-            :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'"
-            @click="openCustomFontEditor(role.key)"
-          />
-        </div>
         </template>
 
         <div v-if="customFontEditorOpen" class="settings-editor-inline">
@@ -299,7 +346,11 @@
             :label="isEnglish ? 'Search typefaces' : 'Buscar tipografías'"
             :hint="isEnglish ? 'Choose by name and preview' : 'Elige por nombre y mira la muestra'"
           />
-          <div class="font-catalog-list" role="listbox" :aria-label="isEnglish ? 'Available typefaces' : 'Tipografías disponibles'">
+          <div
+            class="font-catalog-list"
+            role="listbox"
+            :aria-label="isEnglish ? 'Available typefaces' : 'Tipografías disponibles'"
+          >
             <button
               v-for="font in filteredFontCatalog"
               :key="font.id"
@@ -313,13 +364,34 @@
               <span :style="{ fontFamily: font.family }">Aa Bb Cc Ññ 123</span>
             </button>
             <p v-if="!filteredFontCatalog.length" class="font-catalog-empty">
-              {{ isEnglish ? 'No typefaces match your search.' : 'No hay tipografías con ese nombre.' }}
+              {{
+                isEnglish ? 'No typefaces match your search.' : 'No hay tipografías con ese nombre.'
+              }}
             </p>
           </div>
-          <div class="font-live-preview" :style="{ fontFamily: customFontPreviewFamily }"><small>{{ isEnglish ? 'PREVIEW' : 'VISTA PREVIA' }}</small><strong>Aa Bb Cc Ññ 123</strong><span>{{ isEnglish ? 'A quick look at this typeface.' : 'Así se vería esta tipografía.' }}</span></div>
-          <div class="settings-dialog__actions"><q-btn flat rounded :label="isEnglish ? 'Cancel' : 'Cancelar'" @click="cancelCustomFont" /><q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save typeface' : 'Guardar fuente'" @click="saveCustomFont" /></div>
+          <div class="font-live-preview" :style="{ fontFamily: customFontPreviewFamily }">
+            <small>{{ isEnglish ? 'PREVIEW' : 'VISTA PREVIA' }}</small
+            ><strong>Aa Bb Cc Ññ 123</strong
+            ><span>{{
+              isEnglish ? 'A quick look at this typeface.' : 'Así se vería esta tipografía.'
+            }}</span>
+          </div>
+          <div class="settings-dialog__actions">
+            <q-btn
+              flat
+              rounded
+              :label="isEnglish ? 'Cancel' : 'Cancelar'"
+              @click="cancelCustomFont"
+            /><q-btn
+              unelevated
+              rounded
+              color="primary"
+              icon="save"
+              :label="isEnglish ? 'Save typeface' : 'Guardar fuente'"
+              @click="saveCustomFont"
+            />
+          </div>
         </div>
-
       </q-card>
     </q-dialog>
 
@@ -396,7 +468,8 @@
       <div class="tutorial-overlay">
         <div class="tutorial-card">
           <div class="tutorial-brand">
-            <span class="brand-mark"><q-icon name="explore" /></span><strong>TURISGO</strong>
+            <span class="brand-mark"><img :src="brandLogo" alt="TurisGo" /></span
+            ><strong>TURISGO</strong>
           </div>
           <div class="tutorial-progress">
             <span>{{ isEnglish ? 'QUICK START' : 'INICIO RÁPIDO' }}</span
@@ -488,6 +561,7 @@ import {
 } from '../services/accountRepository'
 
 const $q = useQuasar()
+const brandLogo = `${import.meta.env.BASE_URL}icons/icon-192.png`
 const STORAGE_KEYS = {
   tutorial: 'turisgo.tutorial.completed',
   preferences: 'turisgo.preferences.v2',
@@ -748,11 +822,21 @@ const fontCatalog = [
   { id: 'bebas-neue', name: 'Bebas Neue', family: '"Bebas Neue", sans-serif' },
   { id: 'montserrat', name: 'Montserrat', family: '"Montserrat", sans-serif' },
   { id: 'poppins', name: 'Poppins', family: '"Poppins", sans-serif' },
-  { id:'cocogoose', name: 'Cocogoose', family: '"Cocogoose", sans-serif'},
+  { id: 'cocogoose', name: 'Cocogoose', family: '"Cocogoose", sans-serif' },
 ]
-const oldSelectedFont = storedCustomFonts.find((font) => removedCatalogFontNames.has(font.name?.toLowerCase()))
-if (oldSelectedFont && Object.values(preferences.value.fonts).some((family) => family === oldSelectedFont.value)) {
-  const fonts = Object.fromEntries(Object.entries(preferences.value.fonts).map(([role, family]) => [role, family === oldSelectedFont.value ? '"DM Sans", system-ui, sans-serif' : family]))
+const oldSelectedFont = storedCustomFonts.find((font) =>
+  removedCatalogFontNames.has(font.name?.toLowerCase()),
+)
+if (
+  oldSelectedFont &&
+  Object.values(preferences.value.fonts).some((family) => family === oldSelectedFont.value)
+) {
+  const fonts = Object.fromEntries(
+    Object.entries(preferences.value.fonts).map(([role, family]) => [
+      role,
+      family === oldSelectedFont.value ? '"DM Sans", system-ui, sans-serif' : family,
+    ]),
+  )
   preferences.value = { ...preferences.value, fonts }
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
 }
@@ -901,7 +985,10 @@ const isAuthenticated = ref(false)
 const ownedBusinessProfiles = computed(() => {
   if (!isAuthenticated.value) return []
   const ownerUid = userProfile.value.uid
-  const usernameId = `business-${(userProfile.value.username || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)}`
+  const usernameId = `business-${(userProfile.value.username || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, 40)}`
   const owned = new Map()
   for (const profile of cloudBusinessListings.value) {
     if (profile.ownerUid === ownerUid || (!profile.ownerUid && profile.id === usernameId)) {
@@ -972,14 +1059,26 @@ onMounted(async () => {
     if (!user) {
       people.value = []
       chatContactUids.value = []
-      userProfile.value = { uid: '', name: '', username: '', mode: '', businessName: '', phone: '', email: '', avatarUrl: '' }
+      userProfile.value = {
+        uid: '',
+        name: '',
+        username: '',
+        mode: '',
+        businessName: '',
+        phone: '',
+        email: '',
+        avatarUrl: '',
+      }
       writeStorage(STORAGE_KEYS.profile, userProfile.value)
       return
     }
     try {
       let profile = await loadAccountProfile(user.uid)
       if (!profile && pendingAccountRegistration) {
-        const registrationSucceeded = await pendingAccountRegistration.then(() => true, () => false)
+        const registrationSucceeded = await pendingAccountRegistration.then(
+          () => true,
+          () => false,
+        )
         if (!registrationSucceeded) return
         profile = await loadAccountProfile(user.uid)
       }
@@ -987,20 +1086,41 @@ onMounted(async () => {
         userProfile.value = { ...userProfile.value, ...profile }
         writeStorage(STORAGE_KEYS.profile, userProfile.value)
         stopPresence = startUserPresence(user.uid, profile.username)
-        stopPeopleWatch = watchTravelers(user.uid, (travelers) => {
-          people.value = travelers
-        }, (error) => console.warn('Could not load travelers:', error))
-        stopChatContactsWatch = watchChatContacts(user.uid, (contactUids) => {
-          chatContactUids.value = contactUids
-        }, (error) => console.warn('Could not load chat contacts:', error))
-        stopIncomingMessageWatch = watchIncomingMessages(user.uid, notifyIncomingMessage, (error) => {
-          console.warn('Could not watch incoming messages:', error)
-        })
+        stopPeopleWatch = watchTravelers(
+          user.uid,
+          (travelers) => {
+            people.value = travelers
+          },
+          (error) => console.warn('Could not load travelers:', error),
+        )
+        stopChatContactsWatch = watchChatContacts(
+          user.uid,
+          (contactUids) => {
+            chatContactUids.value = contactUids
+          },
+          (error) => console.warn('Could not load chat contacts:', error),
+        )
+        stopIncomingMessageWatch = watchIncomingMessages(
+          user.uid,
+          notifyIncomingMessage,
+          (error) => {
+            console.warn('Could not watch incoming messages:', error)
+          },
+        )
         startBusinessReplyWatch()
         startBusinessReviewWatch()
       } else {
         isAuthenticated.value = false
-        userProfile.value = { uid: '', name: '', username: '', mode: '', businessName: '', phone: '', email: '', avatarUrl: '' }
+        userProfile.value = {
+          uid: '',
+          name: '',
+          username: '',
+          mode: '',
+          businessName: '',
+          phone: '',
+          email: '',
+          avatarUrl: '',
+        }
         writeStorage(STORAGE_KEYS.profile, userProfile.value)
         accountError.value = accountErrorText({ code: 'profile-not-found' })
         await logoutAccount().catch(() => {})
@@ -1355,28 +1475,43 @@ function deleteCustomFont(fontFamily) {
 function accountErrorText(error) {
   const code = error?.code || error?.message
   const messages = {
-    'auth/email-already-in-use': 'Este correo ya tiene una cuenta. Inicia sesión o usa otro correo.',
-    'auth/invalid-credential': 'No se pudo iniciar sesión. Si aún no tienes una cuenta, selecciona “Crear cuenta”; si ya tienes una, revisa el correo y la contraseña.',
-    'auth/user-not-found': 'No encontramos una cuenta con ese correo. Si aún no tienes una, selecciona “Crear cuenta”.',
+    'auth/email-already-in-use':
+      'Este correo ya tiene una cuenta. Inicia sesión o usa otro correo.',
+    'auth/invalid-credential':
+      'No se pudo iniciar sesión. Si aún no tienes una cuenta, selecciona “Crear cuenta”; si ya tienes una, revisa el correo y la contraseña.',
+    'auth/user-not-found':
+      'No encontramos una cuenta con ese correo. Si aún no tienes una, selecciona “Crear cuenta”.',
     'auth/wrong-password': 'La contraseña no coincide. Revísala e inténtalo de nuevo.',
     'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
     'auth/invalid-email': 'Escribe un correo válido.',
-    'auth/unauthorized-domain': 'No se pudo completar el registro desde este sitio. Inténtalo más tarde o contacta al equipo de TURISGO.',
-    'auth/operation-not-allowed': 'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
-    'auth/configuration-not-found': 'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
-    'auth/invalid-api-key': 'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
-    'auth/network-request-failed': 'No pudimos conectarnos. Revisa tu conexión a Internet e inténtalo de nuevo.',
+    'auth/unauthorized-domain':
+      'No se pudo completar el registro desde este sitio. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/operation-not-allowed':
+      'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/configuration-not-found':
+      'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/invalid-api-key':
+      'No se pudo completar el registro en este momento. Inténtalo más tarde o contacta al equipo de TURISGO.',
+    'auth/network-request-failed':
+      'No pudimos conectarnos. Revisa tu conexión a Internet e inténtalo de nuevo.',
     'auth/too-many-requests': 'Por seguridad, espera un momento antes de volver a intentarlo.',
     'permission-denied': 'No pudimos guardar tu perfil. Inténtalo de nuevo más tarde.',
     'firestore/permission-denied': 'No pudimos guardar tu perfil. Inténtalo de nuevo más tarde.',
     'username-already-used': 'Ese nombre de usuario ya está ocupado.',
     'username-invalid': 'El usuario debe tener entre 3 y 24 caracteres válidos.',
-    'profile-not-found': 'No encontramos el perfil de esta cuenta. Inténtalo de nuevo o contacta al equipo de TURISGO.',
-    'account-details-required': 'Completa el nombre, teléfono, tipo de cuenta y nombre de empresa si aplica.',
+    'profile-not-found':
+      'No encontramos el perfil de esta cuenta. Inténtalo de nuevo o contacta al equipo de TURISGO.',
+    'account-details-required':
+      'Completa el nombre, teléfono, tipo de cuenta y nombre de empresa si aplica.',
     'phone-invalid': 'Escribe un teléfono de El Salvador con 8 dígitos; puedes incluir +503.',
     'auth-required': 'Inicia sesión para continuar.',
   }
-  return messages[code] || (isEnglish.value ? 'We could not complete this step. Check your details and try again.' : 'No pudimos completar este paso. Revisa tus datos e inténtalo de nuevo.')
+  return (
+    messages[code] ||
+    (isEnglish.value
+      ? 'We could not complete this step. Check your details and try again.'
+      : 'No pudimos completar este paso. Revisa tus datos e inténtalo de nuevo.')
+  )
 }
 
 async function register(form) {
@@ -1399,7 +1534,8 @@ async function register(form) {
     accountError.value = accountErrorText(error)
     await logoutAccount().catch(() => {})
   } finally {
-    if (pendingAccountRegistration === registration && accountError.value) pendingAccountRegistration = null
+    if (pendingAccountRegistration === registration && accountError.value)
+      pendingAccountRegistration = null
     accountLoading.value = false
   }
 }
@@ -1537,7 +1673,9 @@ async function verifyVisit(place) {
     return
   }
   $q.dialog({
-    title: isEnglish.value ? 'Allow location to verify your visit' : 'Permitir ubicación para validar la visita',
+    title: isEnglish.value
+      ? 'Allow location to verify your visit'
+      : 'Permitir ubicación para validar la visita',
     message: isEnglish.value
       ? 'TURISGO will ask your browser for your location once to check that you are near this place. Your location is not added to your review.'
       : 'TURISGO pedirá permiso al navegador para comprobar una sola vez que estás cerca de este lugar. Tu ubicación no se agrega a la reseña.',
@@ -1650,9 +1788,9 @@ async function submitReview(review) {
     review.onComplete?.(false)
     const code = error?.code || error?.message
     const message = ['permission-denied', 'firestore/permission-denied'].includes(code)
-      ? (isEnglish.value
+      ? isEnglish.value
         ? 'Firebase denied saving this review. Check the Firestore rules for placeReviews.'
-        : 'Firebase rechazó guardar la reseña. Revisa las reglas de Firestore para placeReviews.')
+        : 'Firebase rechazó guardar la reseña. Revisa las reglas de Firestore para placeReviews.'
       : accountErrorText(error)
     $q.notify({ type: 'negative', message })
     return
@@ -1778,7 +1916,10 @@ async function saveBusinessProfile(profile) {
   }
   const businessId =
     profile.id ||
-    `business-${(userProfile.value.uid || userProfile.value.username || 'viajero').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32)}-${Date.now().toString(36)}`
+    `business-${(userProfile.value.uid || userProfile.value.username || 'viajero')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '')
+      .slice(0, 32)}-${Date.now().toString(36)}`
   const savedProfile = {
     ...profile,
     id: businessId,
