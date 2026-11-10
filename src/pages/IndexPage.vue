@@ -1,9 +1,5 @@
 <template>
-  <div
-    class="app-shell"
-    :class="`theme-${preferences.theme}`"
-    :style="appAppearanceStyle"
-  >
+  <div class="app-shell" :class="`theme-${preferences.theme}`" :style="appAppearanceStyle">
     <header class="app-topbar">
       <button class="brand-lockup" @click="navigateTo('home')">
         <span class="brand-mark"><q-icon name="explore" /></span>
@@ -17,19 +13,29 @@
           class="topbar-language"
           :aria-label="isEnglish ? 'Cambiar idioma a español' : 'Switch language to English'"
           @click="toggleLanguage"
-        >{{ isEnglish ? 'ES' : 'EN' }}</button>
+        >
+          {{ isEnglish ? 'ES' : 'EN' }}
+        </button>
         <button
           class="topbar-account"
           :aria-label="isEnglish ? 'Open account' : 'Abrir cuenta'"
           @click="navigateTo('account')"
         >
           <span class="topbar-account__photo">
-            <img v-if="isAuthenticated && userProfile.avatarUrl && !avatarLoadFailed" :src="userProfile.avatarUrl" alt="" @error="avatarLoadFailed = true" />
+            <img
+              v-if="isAuthenticated && userProfile.avatarUrl && !avatarLoadFailed"
+              :src="userProfile.avatarUrl"
+              alt=""
+              @error="avatarLoadFailed = true"
+            />
             <span v-else-if="isAuthenticated">{{ profileInitials }}</span>
             <q-icon v-else name="person_outline" />
           </span>
           <span class="topbar-account__label">
-            <template v-if="isAuthenticated"><strong>{{ userProfile.name || userProfile.username }}</strong><small>@{{ userProfile.username }}</small></template>
+            <template v-if="isAuthenticated"
+              ><strong>{{ userProfile.name || userProfile.username }}</strong
+              ><small>@{{ userProfile.username }}</small></template
+            >
             <strong v-else>{{ isEnglish ? 'Account' : 'Cuenta' }}</strong>
           </span>
         </button>
@@ -62,6 +68,7 @@
         @open-budget="navigateTo('budget')"
         @select-place="openPlace"
         @toggle-save="toggleSaved"
+        @remember-place="rememberPlace"
       />
 
       <BuscarSection
@@ -74,6 +81,7 @@
         :initial-filter="searchFilter"
         @select-place="openPlace"
         @toggle-save="toggleSaved"
+        @remember-place="rememberPlace"
       />
 
       <GuardadosSection
@@ -111,7 +119,7 @@
       <ExplorarSection
         v-else-if="currentScreen === 'map'"
         :is-english="isEnglish"
-        :places="visiblePlaces"
+        :places="knownPlaces"
         :selected-map-place="selectedMapPlace"
         :route-request="routeRequest"
         @update:selected-map-place="selectedMapPlace = $event"
@@ -121,7 +129,7 @@
       <PresupuestoSection
         v-else-if="currentScreen === 'budget'"
         :is-english="isEnglish"
-        :places="visiblePlaces"
+        :places="knownPlaces"
         :selected-place-ids="budgetPlaceIds"
         :costs="budgetCosts"
         :total-budget="totalBudget"
@@ -215,28 +223,41 @@
 
         <div v-if="!customFontEditorOpen" class="settings-choice-group">
           <div class="settings-label">{{ isEnglish ? 'COLOR THEME' : 'TEMA DE COLOR' }}</div>
-          <div
-          v-for="theme in allThemeOptions"
-            :key="theme.value"
-            class="appearance-choice-row"
-          >
+          <div v-for="theme in allThemeOptions" :key="theme.value" class="appearance-choice-row">
             <button
               :class="['theme-choice', { selected: settingsDraft.theme === theme.value }]"
               @click="selectTheme(theme.value)"
             >
-              <span class="theme-choice__swatches"><i v-for="color in theme.colors" :key="color" :style="{ backgroundColor: color }"></i></span>
+              <span class="theme-choice__swatches"
+                ><i
+                  v-for="color in theme.colors"
+                  :key="color"
+                  :style="{ backgroundColor: color }"
+                ></i
+              ></span>
               <span>{{ isEnglish ? theme.en : theme.es }}</span>
               <q-icon v-if="settingsDraft.theme === theme.value" name="check_circle" />
             </button>
             <q-btn
               v-if="theme.value.startsWith('custom-')"
-              flat round dense icon="delete" class="appearance-choice-delete"
+              flat
+              round
+              dense
+              icon="delete"
+              class="appearance-choice-delete"
               :disable="allThemeOptions.length <= 1"
               :aria-label="isEnglish ? `Delete ${theme.en} palette` : `Eliminar paleta ${theme.es}`"
               @click="deleteCustomTheme(theme.value)"
             />
           </div>
-          <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a three-color palette' : 'Agregar paleta de tres colores'" @click="openCustomThemeEditor" />
+          <q-btn
+            outline
+            rounded
+            no-caps
+            icon="add"
+            :label="isEnglish ? 'Add a three-color palette' : 'Agregar paleta de tres colores'"
+            @click="openCustomThemeEditor"
+          />
         </div>
 
         <template v-if="!customFontEditorOpen">
@@ -258,7 +279,14 @@
                 @click="deleteCustomFont(font.value)" />
             </div>
           </div>
-          <q-btn outline rounded no-caps icon="add" :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'" @click="openCustomFontEditor(role.key)" />
+          <q-btn
+            outline
+            rounded
+            no-caps
+            icon="add"
+            :label="isEnglish ? 'Add a typeface' : 'Agregar una tipografía'"
+            @click="openCustomFontEditor(role.key)"
+          />
         </div>
         </template>
 
@@ -298,13 +326,63 @@
     <q-dialog v-model="customThemeEditorOpen" persistent>
       <q-card class="settings-dialog settings-editor-dialog" :style="appAppearanceStyle">
         <div class="settings-dialog__top">
-          <div><span class="eyebrow">{{ isEnglish ? 'CUSTOM COLORS' : 'COLORES PERSONALIZADOS' }}</span><h2>{{ isEnglish ? 'Create a palette' : 'Crear paleta' }}</h2></div>
-          <q-btn flat round icon="close" :aria-label="isEnglish ? 'Close' : 'Cerrar'" @click="cancelCustomTheme" />
+          <div>
+            <span class="eyebrow">{{
+              isEnglish ? 'CUSTOM COLORS' : 'COLORES PERSONALIZADOS'
+            }}</span>
+            <h2>{{ isEnglish ? 'Create a palette' : 'Crear paleta' }}</h2>
+          </div>
+          <q-btn
+            flat
+            round
+            icon="close"
+            :aria-label="isEnglish ? 'Close' : 'Cerrar'"
+            @click="cancelCustomTheme"
+          />
         </div>
-        <q-input v-model="newThemeDraft.name" outlined rounded maxlength="24" :label="isEnglish ? 'Palette name (optional)' : 'Nombre de la paleta (opcional)'" :hint="isEnglish ? 'A name is created automatically if left blank.' : 'Si lo dejas vacío, se asigna un nombre automáticamente.'" />
-        <label v-for="field in paletteFields" :key="field.key" class="palette-field"><span>{{ isEnglish ? field.en : field.es }}</span><input v-model="newThemeDraft[field.key]" type="color" /></label>
-        <div class="palette-preview" :style="{ background: newThemeDraft.background, color: newThemeDraft.highlight, '--preview-accent': newThemeDraft.accent }"><strong>{{ isEnglish ? 'Palette preview' : 'Vista previa de la paleta' }}</strong><span>{{ isEnglish ? 'Primary color' : 'Color principal' }}</span><i /></div>
-        <div class="settings-dialog__actions"><q-btn flat rounded :label="isEnglish ? 'Cancel' : 'Cancelar'" @click="cancelCustomTheme" /><q-btn unelevated rounded color="primary" icon="save" :label="isEnglish ? 'Save palette' : 'Guardar paleta'" @click="saveCustomTheme" /></div>
+        <q-input
+          v-model="newThemeDraft.name"
+          outlined
+          rounded
+          maxlength="24"
+          :label="isEnglish ? 'Palette name (optional)' : 'Nombre de la paleta (opcional)'"
+          :hint="
+            isEnglish
+              ? 'A name is created automatically if left blank.'
+              : 'Si lo dejas vacío, se asigna un nombre automáticamente.'
+          "
+        />
+        <label v-for="field in paletteFields" :key="field.key" class="palette-field"
+          ><span>{{ isEnglish ? field.en : field.es }}</span
+          ><input v-model="newThemeDraft[field.key]" type="color"
+        /></label>
+        <div
+          class="palette-preview"
+          :style="{
+            background: newThemeDraft.background,
+            color: newThemeDraft.highlight,
+            '--preview-accent': newThemeDraft.accent,
+          }"
+        >
+          <strong>{{ isEnglish ? 'Palette preview' : 'Vista previa de la paleta' }}</strong
+          ><span>{{ isEnglish ? 'Primary color' : 'Color principal' }}</span
+          ><i />
+        </div>
+        <div class="settings-dialog__actions">
+          <q-btn
+            flat
+            rounded
+            :label="isEnglish ? 'Cancel' : 'Cancelar'"
+            @click="cancelCustomTheme"
+          /><q-btn
+            unelevated
+            rounded
+            color="primary"
+            icon="save"
+            :label="isEnglish ? 'Save palette' : 'Guardar paleta'"
+            @click="saveCustomTheme"
+          />
+        </div>
       </q-card>
     </q-dialog>
 
@@ -389,10 +467,7 @@ import MensajesSection from '../components/MensajesSection.vue'
 import EmpresaSection from '../components/EmpresaSection.vue'
 import PlaceDetailDialog from '../components/PlaceDetailDialog.vue'
 import CuentaSection from '../components/CuentaSection.vue'
-import {
-  loadBusinessListings,
-  saveBusinessListing,
-} from '../services/businessRepository'
+import { loadBusinessListings, saveBusinessListing } from '../services/businessRepository'
 import { isPhotoSource } from '../services/imageUtils'
 import {
   loadAccountProfile,
@@ -428,11 +503,31 @@ const STORAGE_KEYS = {
   business: 'turisgo.business-profile',
   premium: 'turisgo.premium-preview',
   replies: 'turisgo.business-replies',
+  remotePlaces: 'turisgo.remote-places',
 }
 const removedCatalogFontNames = new Set([
-  'roboto', 'open sans', 'nunito', 'oswald', 'merriweather', 'playfair display', 'source sans 3',
-  'roboto slab', 'ubuntu', 'rubik', 'inter', 'work sans', 'nunito sans', 'dm sans', 'pt sans',
-  'pt serif', 'libre baskerville', 'caveat', 'dancing script', 'lobster', 'quicksand', 'comfortaa',
+  'roboto',
+  'open sans',
+  'nunito',
+  'oswald',
+  'merriweather',
+  'playfair display',
+  'source sans 3',
+  'roboto slab',
+  'ubuntu',
+  'rubik',
+  'inter',
+  'work sans',
+  'nunito sans',
+  'dm sans',
+  'pt sans',
+  'pt serif',
+  'libre baskerville',
+  'caveat',
+  'dancing script',
+  'lobster',
+  'quicksand',
+  'comfortaa',
   'karla',
 ])
 
@@ -467,14 +562,20 @@ const preferences = ref(
 )
 if (!preferences.value.fonts) {
   const legacyFont = preferences.value.font || '"DM Sans", system-ui, sans-serif'
-  preferences.value = { ...preferences.value, fonts: { title: legacyFont, subtitle: legacyFont, description: legacyFont } }
+  preferences.value = {
+    ...preferences.value,
+    fonts: { title: legacyFont, subtitle: legacyFont, description: legacyFont },
+  }
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
 }
 const preferencesDefaults = { ...preferences.value }
 const customThemes = ref(readStorage(STORAGE_KEYS.themes, []))
 const storedCustomFonts = readStorage(STORAGE_KEYS.fonts, [])
-const customFonts = ref(storedCustomFonts.filter((font) => !removedCatalogFontNames.has(font.name?.toLowerCase())))
-if (customFonts.value.length !== storedCustomFonts.length) writeStorage(STORAGE_KEYS.fonts, customFonts.value)
+const customFonts = ref(
+  storedCustomFonts.filter((font) => !removedCatalogFontNames.has(font.name?.toLowerCase())),
+)
+if (customFonts.value.length !== storedCustomFonts.length)
+  writeStorage(STORAGE_KEYS.fonts, customFonts.value)
 const userProfile = ref(
   readStorage(STORAGE_KEYS.profile, {
     name: '',
@@ -485,7 +586,11 @@ const userProfile = ref(
 )
 const savedIds = ref(readStorage(STORAGE_KEYS.saved, []))
 const budgetPlaceIds = ref(readStorage(STORAGE_KEYS.budgetPlaces, []))
-const budgetCosts = ref(budgetPlaceIds.value.length ? readStorage(STORAGE_KEYS.budget, { food: 0, lodging: 0, extras: 0 }) : { food: 0, lodging: 0, extras: 0 })
+const budgetCosts = ref(
+  budgetPlaceIds.value.length
+    ? readStorage(STORAGE_KEYS.budget, { food: 0, lodging: 0, extras: 0 })
+    : { food: 0, lodging: 0, extras: 0 },
+)
 const visitProofs = ref(readStorage(STORAGE_KEYS.visits, {}))
 const userReviews = ref(readStorage(STORAGE_KEYS.reviews, {}))
 const cloudPlaceReviews = ref({})
@@ -533,7 +638,12 @@ const detailOpen = ref(false)
 const settingsOpen = ref(false)
 const settingsDraft = ref({ ...preferencesDefaults })
 const customThemeEditorOpen = ref(false)
-const newThemeDraft = ref({ name: '', background: '#08243a', accent: '#1688e8', highlight: '#f2b84b' })
+const newThemeDraft = ref({
+  name: '',
+  background: '#08243a',
+  accent: '#1688e8',
+  highlight: '#f2b84b',
+})
 const customFontEditorOpen = ref(false)
 const customFontDraft = ref({ name: '', family: '' })
 const fontCatalogSearch = ref('')
@@ -612,7 +722,12 @@ const themeOptions = [
   { value: 'sunset', es: 'Atardecer', en: 'Sunset', colors: ['#04223a', '#fb5d2e', '#fbc056'] },
 ]
 const builtInFontOptions = [
-  { value: '"Playfair Display", Georgia, serif', es: 'Playfair Display', en: 'Playfair Display', sample: 'Aa' },
+  {
+    value: '"Playfair Display", Georgia, serif',
+    es: 'Playfair Display',
+    en: 'Playfair Display',
+    sample: 'Aa',
+  },
   {
     value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     es: 'Sistema',
@@ -623,7 +738,11 @@ const builtInFontOptions = [
   { value: 'Arial, Helvetica, sans-serif', es: 'Arial', en: 'Arial', sample: 'Aa' },
 ]
 const fontCatalog = [
-  { id: 'montserrat-alternates', name: 'Montserrat Alternates', family: '"Montserrat Alternates", sans-serif' },
+  {
+    id: 'montserrat-alternates',
+    name: 'Montserrat Alternates',
+    family: '"Montserrat Alternates", sans-serif',
+  },
   { id: 'lato', name: 'Lato', family: '"Lato", sans-serif' },
   { id: 'raleway', name: 'Raleway', family: '"Raleway", sans-serif' },
   { id: 'bebas-neue', name: 'Bebas Neue', family: '"Bebas Neue", sans-serif' },
@@ -648,27 +767,33 @@ const customFontPreviewFamily = computed(() => customFontDraft.value.family || '
 const appAppearanceStyle = computed(() => {
   const selected = allThemeOptions.value.find((theme) => theme.value === preferences.value.theme)
   const colors = selected?.colors || preferences.value.customColors
-  const rgb = colors?.[0]?.match(/[\da-f]{2}/gi)?.slice(0, 3).map((part) => parseInt(part, 16))
-  const lightBackground = rgb?.length === 3 && (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) > 150
+  const rgb = colors?.[0]
+    ?.match(/[\da-f]{2}/gi)
+    ?.slice(0, 3)
+    .map((part) => parseInt(part, 16))
+  const lightBackground =
+    rgb?.length === 3 && 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2] > 150
   return {
     '--font-title': preferences.value.fonts.title,
     '--font-subtitle': preferences.value.fonts.subtitle,
     '--font-description': preferences.value.fonts.description,
     ...(colors ? { colorScheme: lightBackground ? 'light' : 'dark' } : {}),
-    ...(colors ? {
-      '--app-bg': colors[0],
-      '--surface': `color-mix(in srgb, ${colors[0]} ${lightBackground ? '94%' : '84%'}, ${lightBackground ? 'black' : 'white'})`,
-      '--surface-raised': `color-mix(in srgb, ${colors[0]} ${lightBackground ? '88%' : '72%'}, ${lightBackground ? 'black' : 'white'})`,
-      '--surface-soft': `color-mix(in srgb, ${colors[0]} ${lightBackground ? '80%' : '60%'}, ${lightBackground ? 'black' : 'white'})`,
-      '--text-primary': lightBackground ? '#102538' : '#f4f9fd',
-      '--text-muted': lightBackground ? '#52697a' : '#a9c4d9',
-      '--accent': colors[1],
-      '--accent-strong': colors[1],
-      '--q-primary': colors[1],
-      '--gold': colors[2],
-      '--c-gold': colors[2],
-      '--line': `color-mix(in srgb, ${colors[1]} 35%, transparent)`,
-    } : {}),
+    ...(colors
+      ? {
+          '--app-bg': colors[0],
+          '--surface': `color-mix(in srgb, ${colors[0]} ${lightBackground ? '94%' : '84%'}, ${lightBackground ? 'black' : 'white'})`,
+          '--surface-raised': `color-mix(in srgb, ${colors[0]} ${lightBackground ? '88%' : '72%'}, ${lightBackground ? 'black' : 'white'})`,
+          '--surface-soft': `color-mix(in srgb, ${colors[0]} ${lightBackground ? '80%' : '60%'}, ${lightBackground ? 'black' : 'white'})`,
+          '--text-primary': lightBackground ? '#102538' : '#f4f9fd',
+          '--text-muted': lightBackground ? '#52697a' : '#a9c4d9',
+          '--accent': colors[1],
+          '--accent-strong': colors[1],
+          '--q-primary': colors[1],
+          '--gold': colors[2],
+          '--c-gold': colors[2],
+          '--line': `color-mix(in srgb, ${colors[1]} 35%, transparent)`,
+        }
+      : {}),
   }
 })
 
@@ -716,8 +841,23 @@ const visiblePlaces = computed(() => {
   )
   return [...catalogPlaces, ...activeListings.map(mapBusinessPlace)]
 })
+// Lugares de la búsqueda en vivo que el usuario abrió o guardó (máx. 60, los más recientes).
+const remotePlaces = ref(readStorage(STORAGE_KEYS.remotePlaces, []))
+// Catálogo + lugares remotos. El inicio sigue usando solo visiblePlaces.
+const knownPlaces = computed(() => {
+  const ids = new Set(visiblePlaces.value.map((place) => place.id))
+  return [...visiblePlaces.value, ...remotePlaces.value.filter((place) => !ids.has(place.id))]
+})
+function rememberPlace(place) {
+  if (!place?.id) return
+  remotePlaces.value = [place, ...remotePlaces.value.filter((item) => item.id !== place.id)].slice(
+    0,
+    60,
+  )
+  writeStorage(STORAGE_KEYS.remotePlaces, remotePlaces.value)
+}
 const savedPlaces = computed(() =>
-  visiblePlaces.value.filter((place) => savedIds.value.includes(place.id)),
+  knownPlaces.value.filter((place) => savedIds.value.includes(place.id)),
 )
 const selectedReviews = computed(() => {
   if (!selectedPlace.value) return []
@@ -728,14 +868,17 @@ const selectedReviews = computed(() => {
 const isVisitVerified = computed(() =>
   Boolean(selectedPlace.value && visitProofs.value[selectedPlace.value.id]),
 )
-const businessReviews = computed(
-  () =>
-    [...(cloudPlaceReviews.value[businessProfile.value.id || `business-${userProfile.value.username}`] || []), ...(userReviews.value[businessProfile.value.id || `business-${userProfile.value.username}`] || [])],
-)
+const businessReviews = computed(() => [
+  ...(cloudPlaceReviews.value[
+    businessProfile.value.id || `business-${userProfile.value.username}`
+  ] || []),
+  ...(userReviews.value[businessProfile.value.id || `business-${userProfile.value.username}`] ||
+    []),
+])
 const businessUpdateDue = computed(() => isListingUpdateDue(businessProfile.value))
 const totalBudget = computed(() => {
   const travel = budgetPlaceIds.value.reduce((sum, id) => {
-    const place = visiblePlaces.value.find((item) => item.id === id)
+    const place = knownPlaces.value.find((item) => item.id === id)
     return sum + Number(place?.travelEstimate || 0) + Number(place?.admissionEstimate || 0)
   }, 0)
   return (
@@ -795,9 +938,13 @@ watch(isEnglish, (value) => {
 watch(selectedPlace, (place) => {
   stopReviewWatch?.()
   if (!place?.id) return
-  stopReviewWatch = watchPlaceReviews(place.id, (reviews) => {
-    cloudPlaceReviews.value = { ...cloudPlaceReviews.value, [place.id]: reviews }
-  }, (error) => console.warn('Could not load place reviews:', error))
+  stopReviewWatch = watchPlaceReviews(
+    place.id,
+    (reviews) => {
+      cloudPlaceReviews.value = { ...cloudPlaceReviews.value, [place.id]: reviews }
+    },
+    (error) => console.warn('Could not load place reviews:', error),
+  )
 })
 
 onMounted(async () => {
@@ -936,7 +1083,12 @@ function navigateTo(screen) {
   if (screen === 'business' && !isAuthenticated.value) screen = 'account'
   else if (screen === 'business' && userProfile.value.mode !== 'business') screen = 'account'
   currentScreen.value = screen
-  if (screen === 'messages' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+  if (
+    screen === 'messages' &&
+    typeof window !== 'undefined' &&
+    'Notification' in window &&
+    Notification.permission === 'default'
+  ) {
     Notification.requestPermission().catch(() => {})
   }
   selectedNav.value = ['home', 'search', 'map', 'saved', 'messages', 'account'].includes(screen)
@@ -1092,12 +1244,18 @@ function openCustomThemeEditor() {
 }
 
 function saveCustomTheme() {
-  const name = newThemeDraft.value.name.trim() || `${isEnglish.value ? 'Palette' : 'Paleta'} ${customThemes.value.length + 1}`
+  const name =
+    newThemeDraft.value.name.trim() ||
+    `${isEnglish.value ? 'Palette' : 'Paleta'} ${customThemes.value.length + 1}`
   const theme = {
     value: `custom-${Date.now()}`,
     es: name,
     en: name,
-    colors: [newThemeDraft.value.background, newThemeDraft.value.accent, newThemeDraft.value.highlight],
+    colors: [
+      newThemeDraft.value.background,
+      newThemeDraft.value.accent,
+      newThemeDraft.value.highlight,
+    ],
   }
   customThemes.value = [...customThemes.value, theme]
   writeStorage(STORAGE_KEYS.themes, customThemes.value)
@@ -1105,7 +1263,10 @@ function saveCustomTheme() {
   preferences.value = { ...preferences.value, theme: theme.value }
   writeStorage(STORAGE_KEYS.preferences, preferences.value)
   cancelCustomTheme()
-  $q.notify({ type: 'positive', message: isEnglish.value ? 'Palette saved and applied.' : 'Paleta guardada y aplicada.' })
+  $q.notify({
+    type: 'positive',
+    message: isEnglish.value ? 'Palette saved and applied.' : 'Paleta guardada y aplicada.',
+  })
 }
 
 function deleteCustomTheme(themeId) {
@@ -1116,8 +1277,12 @@ function deleteCustomTheme(themeId) {
     preferences.value = { ...preferences.value, theme: 'turisgo' }
     writeStorage(STORAGE_KEYS.preferences, preferences.value)
   }
-  if (settingsDraft.value.theme === themeId) settingsDraft.value = { ...settingsDraft.value, theme: preferences.value.theme }
-  $q.notify({ type: 'positive', message: isEnglish.value ? 'Palette deleted.' : 'Paleta eliminada.' })
+  if (settingsDraft.value.theme === themeId)
+    settingsDraft.value = { ...settingsDraft.value, theme: preferences.value.theme }
+  $q.notify({
+    type: 'positive',
+    message: isEnglish.value ? 'Palette deleted.' : 'Paleta eliminada.',
+  })
 }
 
 function openCustomFontEditor(role = 'title') {
@@ -1143,16 +1308,26 @@ function saveCustomFont() {
   const name = customFontDraft.value.name.trim()
   const family = customFontDraft.value.family
   if (!name || !family) {
-    $q.notify({ type: 'warning', message: isEnglish.value ? 'Search the catalog and choose a typeface first.' : 'Busca y selecciona una tipografía del catálogo.' })
+    $q.notify({
+      type: 'warning',
+      message: isEnglish.value
+        ? 'Search the catalog and choose a typeface first.'
+        : 'Busca y selecciona una tipografía del catálogo.',
+    })
     return
   }
   const font = { name, es: name, en: name, value: family, sample: 'Aa' }
-  const withoutDuplicate = customFonts.value.filter((item) => item.name.toLowerCase() !== name.toLowerCase())
+  const withoutDuplicate = customFonts.value.filter(
+    (item) => item.name.toLowerCase() !== name.toLowerCase(),
+  )
   customFonts.value = [...withoutDuplicate, font]
   writeStorage(STORAGE_KEYS.fonts, customFonts.value)
   selectFont(customFontRole.value, family)
   cancelCustomFont()
-  $q.notify({ type: 'positive', message: isEnglish.value ? 'Typeface saved and applied.' : 'Tipografía guardada y aplicada.' })
+  $q.notify({
+    type: 'positive',
+    message: isEnglish.value ? 'Typeface saved and applied.' : 'Tipografía guardada y aplicada.',
+  })
 }
 
 function deleteCustomFont(fontFamily) {
@@ -1160,13 +1335,21 @@ function deleteCustomFont(fontFamily) {
   customFonts.value = customFonts.value.filter((font) => font.value !== fontFamily)
   writeStorage(STORAGE_KEYS.fonts, customFonts.value)
   const fallbackFont = '"DM Sans", system-ui, sans-serif'
-  const fonts = Object.fromEntries(Object.entries(preferences.value.fonts).map(([role, value]) => [role, value === fontFamily ? fallbackFont : value]))
+  const fonts = Object.fromEntries(
+    Object.entries(preferences.value.fonts).map(([role, value]) => [
+      role,
+      value === fontFamily ? fallbackFont : value,
+    ]),
+  )
   if (Object.keys(fonts).some((role) => fonts[role] !== preferences.value.fonts[role])) {
     preferences.value = { ...preferences.value, fonts }
     writeStorage(STORAGE_KEYS.preferences, preferences.value)
   }
   settingsDraft.value = { ...settingsDraft.value, fonts: { ...preferences.value.fonts } }
-  $q.notify({ type: 'positive', message: isEnglish.value ? 'Typeface deleted.' : 'Tipografía eliminada.' })
+  $q.notify({
+    type: 'positive',
+    message: isEnglish.value ? 'Typeface deleted.' : 'Tipografía eliminada.',
+  })
 }
 
 function accountErrorText(error) {
@@ -1208,7 +1391,10 @@ async function register(form) {
     showProfilePhotoStep.value = true
     writeStorage(STORAGE_KEYS.profile, userProfile.value)
     navigateTo('account')
-    $q.notify({ type: 'positive', message: isEnglish.value ? 'Account created.' : 'Cuenta creada.' })
+    $q.notify({
+      type: 'positive',
+      message: isEnglish.value ? 'Account created.' : 'Cuenta creada.',
+    })
   } catch (error) {
     accountError.value = accountErrorText(error)
     await logoutAccount().catch(() => {})
@@ -1375,7 +1561,12 @@ async function locateAndVerifyVisit(place, placeCoordinates) {
     const allowedDistance = accuracy > 10000 ? 2500 : Math.max(2500, accuracy * 1.25)
     if (distance > allowedDistance) {
       if (accuracy > 10000) {
-        $q.notify({ type: 'warning', message: isEnglish.value ? 'Your device location is too imprecise to confirm this visit from here. Turn on precise location and try again.' : 'La ubicación del dispositivo es muy imprecisa para confirmar la visita desde aquí. Activa la ubicación precisa e inténtalo de nuevo.' })
+        $q.notify({
+          type: 'warning',
+          message: isEnglish.value
+            ? 'Your device location is too imprecise to confirm this visit from here. Turn on precise location and try again.'
+            : 'La ubicación del dispositivo es muy imprecisa para confirmar la visita desde aquí. Activa la ubicación precisa e inténtalo de nuevo.',
+        })
         return
       }
       $q.notify({
@@ -1412,8 +1603,15 @@ async function locateAndVerifyVisit(place, placeCoordinates) {
 function normalizeCoordinates(value) {
   if (!Array.isArray(value) || value.length !== 2) return null
   let [latitude, longitude] = value.map(Number)
-  if (Math.abs(latitude) > 90 && Math.abs(longitude) <= 90) [latitude, longitude] = [longitude, latitude]
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+  if (Math.abs(latitude) > 90 && Math.abs(longitude) <= 90)
+    [latitude, longitude] = [longitude, latitude]
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    Math.abs(latitude) > 90 ||
+    Math.abs(longitude) > 180
+  )
+    return null
   return [latitude, longitude]
 }
 
@@ -1469,7 +1667,12 @@ async function submitReview(review) {
 function activatePremiumPreview() {
   if (!isAuthenticated.value || userProfile.value.mode !== 'business') {
     navigateTo('account')
-    $q.notify({ type: 'info', message: isEnglish.value ? 'Sign in with a business account to open these tools.' : 'Inicia sesión con una cuenta empresarial para usar estas herramientas.' })
+    $q.notify({
+      type: 'info',
+      message: isEnglish.value
+        ? 'Sign in with a business account to open these tools.'
+        : 'Inicia sesión con una cuenta empresarial para usar estas herramientas.',
+    })
     return
   }
   premiumPreviewActive.value = true
@@ -1561,7 +1764,9 @@ async function saveBusinessProfile(profile) {
     })
     return
   }
-  const coordinates = normalizeCoordinates(parseMapCoordinates(profile.mapUrl) || profile.coordinates)
+  const coordinates = normalizeCoordinates(
+    parseMapCoordinates(profile.mapUrl) || profile.coordinates,
+  )
   if (!coordinates || coordinates.some((coordinate) => !Number.isFinite(coordinate))) {
     $q.notify({
       type: 'negative',
@@ -1635,21 +1840,34 @@ function businessSaveErrorMessage(code, english) {
 
 function startBusinessReplyWatch() {
   stopBusinessReplyWatch?.()
-  const businessId = businessProfile.value.id || `business-${(userProfile.value.username || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)}`
+  const businessId =
+    businessProfile.value.id ||
+    `business-${(userProfile.value.username || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '')
+      .slice(0, 40)}`
   if (!isAuthenticated.value || !businessId) return
-  stopBusinessReplyWatch = watchBusinessReplies(businessId, (replies) => {
-    businessReplies.value = { ...businessReplies.value, ...replies }
-    writeStorage(STORAGE_KEYS.replies, businessReplies.value)
-  }, (error) => console.warn('Could not load business replies:', error))
+  stopBusinessReplyWatch = watchBusinessReplies(
+    businessId,
+    (replies) => {
+      businessReplies.value = { ...businessReplies.value, ...replies }
+      writeStorage(STORAGE_KEYS.replies, businessReplies.value)
+    },
+    (error) => console.warn('Could not load business replies:', error),
+  )
 }
 
 function startBusinessReviewWatch() {
   stopBusinessReviewWatch?.()
   const businessId = businessProfile.value.id
   if (!isAuthenticated.value || !businessId) return
-  stopBusinessReviewWatch = watchPlaceReviews(businessId, (reviews) => {
-    cloudPlaceReviews.value = { ...cloudPlaceReviews.value, [businessId]: reviews }
-  }, (error) => console.warn('Could not load business reviews:', error))
+  stopBusinessReviewWatch = watchPlaceReviews(
+    businessId,
+    (reviews) => {
+      cloudPlaceReviews.value = { ...cloudPlaceReviews.value, [businessId]: reviews }
+    },
+    (error) => console.warn('Could not load business reviews:', error),
+  )
 }
 
 async function replyToReview({ reviewId, message }) {
@@ -1682,21 +1900,29 @@ async function sendMessage({ uid, text }) {
 
 function notifyIncomingMessage(message) {
   const sender = people.value.find((person) => person.uid === message.senderUid)
-  const senderName = message.senderName || sender?.name || (isEnglish.value ? 'New message' : 'Nuevo mensaje')
+  const senderName =
+    message.senderName || sender?.name || (isEnglish.value ? 'New message' : 'Nuevo mensaje')
   const body = String(message.text || '').slice(0, 180)
   $q.notify({
     type: 'info',
     message: `${senderName}: ${body}`,
     caption: isEnglish.value ? 'New TURISGO message' : 'Nuevo mensaje de TURISGO',
     timeout: 6500,
-    actions: [{
-      label: isEnglish.value ? 'OPEN' : 'VER',
-      color: 'white',
-      handler: () => navigateTo('messages'),
-    }],
+    actions: [
+      {
+        label: isEnglish.value ? 'OPEN' : 'VER',
+        color: 'white',
+        handler: () => navigateTo('messages'),
+      },
+    ],
   })
 
-  if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return
+  if (
+    typeof window === 'undefined' ||
+    !('Notification' in window) ||
+    Notification.permission !== 'granted'
+  )
+    return
   if (document.visibilityState !== 'hidden') return
   const options = {
     body,
